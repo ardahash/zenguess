@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { marketGateway } from "@/lib/gateways"
+import { clientEnv } from "@/lib/env/client"
 import type { MarketCategory, MarketStatus } from "@/services/markets"
 
 export const dynamic = "force-dynamic"
@@ -89,6 +90,16 @@ export async function GET(request: Request) {
 
 // POST /api/markets
 export async function POST(request: Request) {
+  if (clientEnv.NEXT_PUBLIC_GATEWAY_MODE === "onchain") {
+    return NextResponse.json(
+      {
+        error:
+          "On-chain market creation must be executed from a connected wallet in the client.",
+      },
+      { status: 400 }
+    )
+  }
+
   let body: unknown
   try {
     body = await request.json()

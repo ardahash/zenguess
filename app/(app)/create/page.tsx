@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAccount } from "wagmi"
+import { useAccount, usePublicClient, useWalletClient } from "wagmi"
 import { z } from "zod"
 import {
   ArrowLeft,
@@ -29,6 +29,12 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import type { MarketCategory } from "@/data/types"
 import { clientEnv } from "@/lib/env/client"
+import {
+  createMarketOnchain,
+  isOnchainGatewayEnabled,
+} from "@/lib/contracts"
+import { defaultChain } from "@/lib/chains"
+import { isWrongNetwork } from "@/lib/web3"
 
 const steps = [
   "Question",
@@ -77,7 +83,9 @@ function sleep(ms: number): Promise<void> {
 
 export default function CreateMarketPage() {
   const router = useRouter()
-  const { address } = useAccount()
+  const { address, chainId, isConnected } = useAccount()
+  const { data: walletClient } = useWalletClient()
+  const publicClient = usePublicClient({ chainId: defaultChain.id })
   const [step, setStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [stepError, setStepError] = useState<string | null>(null)
@@ -174,6 +182,39 @@ export default function CreateMarketPage() {
     setIsSubmitting(true)
     setStepError(null)
     try {
+      if (isOnchainGatewayEnabled()) {
+        if (!isConnected || !address) {
+          throw new Error("Connect your wallet before creating a market.")
+        }
+        if (isWrongNetwork(chainId)) {
+          throw new Error(`Switch to ${defaultChain.name} before creating a market.`)
+        }
+        if (!walletClient || !publicClient) {
+          throw new Error("Wallet client is not ready yet. Please try again.")
+        }
+
+        const result = await createMarketOnchain(
+          { walletClient, publicClient },
+          {
+            question: payload.question.trim(),
+            description: payload.description.trim(),
+            category: payload.category,
+            endTime: payload.endDateTime.toISOString(),
+            outcomes: payload.outcomes,
+            initialLiquidity: payload.initialLiquidity,
+            resolutionSource: payload.resolutionSource.trim(),
+            tags: payload.tags,
+            creatorAddress: address,
+          }
+        )
+
+        toast.success("Market created onchain", {
+          description: `Tx: ${result.txHash.slice(0, 10)}... | Market ID: ${result.marketId}`,
+        })
+        router.push(`/markets/${result.marketId}`)
+        return
+      }
+
       const response = await fetch("/api/markets", {
         method: "POST",
         headers: {

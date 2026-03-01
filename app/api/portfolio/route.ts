@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
+import { clientEnv } from "@/lib/env/client"
+import { fetchOnchainPortfolio } from "@/lib/onchain/indexer"
 import { marketRepository } from "@/services/markets"
 
 export const dynamic = "force-dynamic"
@@ -25,7 +27,10 @@ export async function GET(request: Request) {
     )
   }
 
-  const positions = marketRepository.getPortfolio(parsedQuery.data.address)
+  const positions =
+    clientEnv.NEXT_PUBLIC_GATEWAY_MODE === "onchain"
+      ? await fetchOnchainPortfolio(parsedQuery.data.address)
+      : marketRepository.getPortfolio(parsedQuery.data.address)
   return NextResponse.json(
     {
       data: positions,

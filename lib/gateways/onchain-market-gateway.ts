@@ -3,6 +3,11 @@ import type {
   ListMarketsFilters,
   MarketEntity,
 } from "@/services/markets"
+import {
+  fetchOnchainMarketById,
+  fetchOnchainMarkets,
+  fetchOnchainTradeSimulation,
+} from "@/lib/onchain/indexer"
 import type {
   ClaimWinningsOutput,
   MarketGateway,
@@ -14,35 +19,37 @@ import type {
 } from "./market-gateway"
 
 export class OnchainMarketGateway implements MarketGateway {
-  // TODO: Wire viem public/wallet clients + contract calls for each method.
   async listMarkets(filters: ListMarketsFilters = {}): Promise<MarketEntity[]> {
-    void filters
-    throw new Error("OnchainMarketGateway not implemented yet.")
+    return fetchOnchainMarkets(filters)
   }
 
   async getMarket(marketId: string): Promise<MarketEntity | null> {
-    void marketId
-    throw new Error("OnchainMarketGateway not implemented yet.")
+    return fetchOnchainMarketById(marketId)
   }
 
   async simulateTrade(input: SimulateTradeInput): Promise<SimulateTradeOutput> {
-    void input
-    throw new Error("OnchainMarketGateway not implemented yet.")
+    return fetchOnchainTradeSimulation(input)
   }
 
   async submitTrade(input: SubmitTradeInput): Promise<SubmitTradeOutput> {
     void input
-    throw new Error("OnchainMarketGateway not implemented yet.")
+    throw new Error(
+      "On-chain trades must be signed from a connected wallet in the client."
+    )
   }
 
   async createMarket(input: CreateMarketInput): Promise<MarketEntity> {
     void input
-    throw new Error("OnchainMarketGateway not implemented yet.")
+    throw new Error(
+      "On-chain market creation must be signed from a connected wallet in the client."
+    )
   }
 
   async resolveMarket(input: ResolveMarketInput): Promise<MarketEntity | null> {
     void input
-    throw new Error("OnchainMarketGateway not implemented yet.")
+    throw new Error(
+      "On-chain market resolution must be signed from a connected wallet in the client."
+    )
   }
 
   async claimWinnings(
@@ -51,6 +58,8 @@ export class OnchainMarketGateway implements MarketGateway {
   ): Promise<ClaimWinningsOutput> {
     void marketId
     void account
-    throw new Error("OnchainMarketGateway not implemented yet.")
+    throw new Error(
+      "Claiming winnings must be signed from a connected wallet in the client."
+    )
   }
 }

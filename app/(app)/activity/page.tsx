@@ -51,7 +51,10 @@ export default function ActivityPage() {
       try {
         setIsLoading(true)
         setError(null)
-        const response = await fetch("/api/activity", { signal: controller.signal })
+        const response = await fetch("/api/activity", {
+          signal: controller.signal,
+          cache: "no-store",
+        })
         if (!response.ok) {
           throw new Error("Failed to load activity feed.")
         }

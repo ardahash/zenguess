@@ -12,7 +12,12 @@ const clientSchema = z.object({
   NEXT_PUBLIC_HORIZEN_TESTNET_FAUCET_URL: z.string().url(),
   NEXT_PUBLIC_ENABLE_MOCK_WALLET: z.enum(["true", "false"]).default("false"),
   NEXT_PUBLIC_ENABLE_DEMO_DATA: z.enum(["true", "false"]).default("false"),
-  NEXT_PUBLIC_GATEWAY_MODE: z.enum(["mock", "onchain"]).default("mock"),
+  NEXT_PUBLIC_GATEWAY_MODE: z.enum(["mock", "onchain"]).default("onchain"),
+  NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK: z
+    .string()
+    .regex(/^\d+$/)
+    .optional()
+    .or(z.literal("")),
   NEXT_PUBLIC_GOLDSKY_ENDPOINT: z
     .string()
     .url()
@@ -76,6 +81,9 @@ const parsedClientEnv = clientSchema.safeParse({
     process.env.NEXT_PUBLIC_ENABLE_DEMO_DATA
   ),
   NEXT_PUBLIC_GATEWAY_MODE: optionalEnv(process.env.NEXT_PUBLIC_GATEWAY_MODE),
+  NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK: optionalEnv(
+    process.env.NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK
+  ),
   NEXT_PUBLIC_GOLDSKY_ENDPOINT: optionalEnv(
     process.env.NEXT_PUBLIC_GOLDSKY_ENDPOINT
   ),
@@ -93,6 +101,8 @@ export const clientEnv = {
   ...env,
   NEXT_PUBLIC_ENABLE_MOCK_WALLET: env.NEXT_PUBLIC_ENABLE_MOCK_WALLET === "true",
   NEXT_PUBLIC_ENABLE_DEMO_DATA: env.NEXT_PUBLIC_ENABLE_DEMO_DATA === "true",
+  NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK:
+    env.NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK || undefined,
   NEXT_PUBLIC_GOLDSKY_ENDPOINT: env.NEXT_PUBLIC_GOLDSKY_ENDPOINT || undefined,
   NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID:
     env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || undefined,

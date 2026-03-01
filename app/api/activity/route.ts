@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
+import { clientEnv } from "@/lib/env/client"
+import { fetchOnchainActivity } from "@/lib/onchain/indexer"
 import { marketRepository } from "@/services/markets"
 
 export const dynamic = "force-dynamic"
@@ -22,7 +24,10 @@ export async function GET(request: Request) {
     )
   }
 
-  const activity = marketRepository.listActivity(parsedQuery.data.limit ?? 100)
+  const activity =
+    clientEnv.NEXT_PUBLIC_GATEWAY_MODE === "onchain"
+      ? await fetchOnchainActivity(parsedQuery.data.limit ?? 100)
+      : marketRepository.listActivity(parsedQuery.data.limit ?? 100)
   return NextResponse.json(
     {
       data: activity,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { marketGateway } from "@/lib/gateways"
+import { clientEnv } from "@/lib/env/client"
 
 export const dynamic = "force-dynamic"
 
@@ -15,6 +16,16 @@ const submitTradeSchema = z.object({
 
 // POST /api/trades
 export async function POST(request: Request) {
+  if (clientEnv.NEXT_PUBLIC_GATEWAY_MODE === "onchain") {
+    return NextResponse.json(
+      {
+        error:
+          "On-chain trades must be submitted from a connected wallet in the client.",
+      },
+      { status: 400 }
+    )
+  }
+
   let body: unknown
   try {
     body = await request.json()

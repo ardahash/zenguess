@@ -1,8 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { useAccount } from "wagmi"
-import { z } from "zod"
+import { useAccount, usePublicClient, useWalletClient } from "wagmi"
 import { ArrowDownRight, ArrowUpRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,23 +11,25 @@ import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { defaultChain } from "@/lib/chains"
 import { formatUSD } from "@/lib/format"
-import { submitTrade, simulateTrade } from "@/lib/contracts"
+import {
+  claimWinningsOnchain,
+  isOnchainGatewayEnabled,
+  submitTrade,
+  submitTradeOnchain,
+  simulateTrade,
+} from "@/lib/contracts"
 import { isWrongNetwork } from "@/lib/web3"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import type { Market } from "@/data/types"
 
 const MIN_TRADE_AMOUNT = 1
+const MIN_SELL_SHARES_AMOUNT = 0.01
 const MAX_TRADE_AMOUNT = 1_000_000
 const LARGE_TRADE_CONFIRM_THRESHOLD = 5_000
+const LARGE_SELL_SHARES_CONFIRM_THRESHOLD = 10_000
 const MIN_SLIPPAGE = 0.1
 const MAX_SLIPPAGE = 5
-
-const amountSchema = z
-  .number()
-  .finite()
-  .min(MIN_TRADE_AMOUNT, `Amount must be at least $${MIN_TRADE_AMOUNT}.`)
-  .max(MAX_TRADE_AMOUNT, `Amount exceeds maximum trade size.`)
 
 interface TradePanelProps {
   market: Market
@@ -36,6 +37,8 @@ interface TradePanelProps {
 
 export function TradePanel({ market }: TradePanelProps) {
   const { address, chainId, isConnected } = useAccount()
+  const { data: walletClient } = useWalletClient()
+  const publicClient = usePublicClient({ chainId: defaultChain.id })
   const [side, setSide] = useState<"buy" | "sell">("buy")
   const [outcomeIndex, setOutcomeIndex] = useState(0)
   const [amount, setAmount] = useState("")
@@ -53,6 +56,7 @@ export function TradePanel({ market }: TradePanelProps) {
   const yesProb = market.outcomes[0]?.probability ?? 0.5
   const noProb = market.outcomes[1]?.probability ?? 0.5
   const isResolved = market.status === "resolved"
+  const onchainMode = isOnchainGatewayEnabled()
   const wrongNetwork = isConnected && isWrongNetwork(chainId)
   const parsedAmount = Number(amount)
 
@@ -75,10 +79,28 @@ export function TradePanel({ market }: TradePanelProps) {
   ])
 
   function validateAmount(nextAmount: number): string | null {
-    const parsed = amountSchema.safeParse(nextAmount)
-    if (!parsed.success) {
-      return parsed.error.issues[0]?.message ?? "Invalid amount."
+    if (!Number.isFinite(nextAmount)) {
+      return "Enter a valid amount."
     }
+
+    const minAmount =
+      onchainMode && side === "sell"
+        ? MIN_SELL_SHARES_AMOUNT
+        : MIN_TRADE_AMOUNT
+    if (nextAmount < minAmount) {
+      if (onchainMode && side === "sell") {
+        return `Shares must be at least ${MIN_SELL_SHARES_AMOUNT}.`
+      }
+      return `Amount must be at least $${MIN_TRADE_AMOUNT}.`
+    }
+
+    if (nextAmount > MAX_TRADE_AMOUNT) {
+      if (onchainMode && side === "sell") {
+        return "Shares amount exceeds maximum trade size."
+      }
+      return "Amount exceeds maximum trade size."
+    }
+
     return null
   }
 
@@ -160,9 +182,17 @@ export function TradePanel({ market }: TradePanelProps) {
       return
     }
 
-    if (nextAmount >= LARGE_TRADE_CONFIRM_THRESHOLD) {
+    if (side === "buy" && nextAmount >= LARGE_TRADE_CONFIRM_THRESHOLD) {
       const confirmed = window.confirm(
         `This trade is large ($${nextAmount.toLocaleString()}). Are you sure you want to continue?`
+      )
+      if (!confirmed) {
+        return
+      }
+    }
+    if (side === "sell" && nextAmount >= LARGE_SELL_SHARES_CONFIRM_THRESHOLD) {
+      const confirmed = window.confirm(
+        `This sell size is large (${nextAmount.toLocaleString()} shares). Are you sure you want to continue?`
       )
       if (!confirmed) {
         return
@@ -172,14 +202,31 @@ export function TradePanel({ market }: TradePanelProps) {
     setIsSubmitting(true)
     setFormError(null)
     try {
-      const result = await submitTrade({
-        marketId: market.id,
-        outcomeIndex,
-        amount: nextAmount,
-        side,
-        slippage: slippage / 100,
-        traderAddress: address,
-      })
+      const result = onchainMode
+        ? await (async () => {
+            if (!walletClient || !publicClient) {
+              throw new Error("Wallet client is not ready yet.")
+            }
+            return submitTradeOnchain(
+              { walletClient, publicClient },
+              {
+                marketId: market.id,
+                outcomeIndex,
+                amount: nextAmount,
+                side,
+                slippage: slippage / 100,
+                traderAddress: address,
+              }
+            )
+          })()
+        : await submitTrade({
+            marketId: market.id,
+            outcomeIndex,
+            amount: nextAmount,
+            side,
+            slippage: slippage / 100,
+            traderAddress: address,
+          })
 
       if (result.success) {
         toast.success(
@@ -206,7 +253,31 @@ export function TradePanel({ market }: TradePanelProps) {
   }
 
   async function handleClaimWinnings() {
-    toast.info("Claim flow is currently mocked and will be on-chain soon.")
+    if (!onchainMode) {
+      toast.info("Claim flow is currently mocked and will be on-chain soon.")
+      return
+    }
+
+    if (!walletClient || !publicClient) {
+      toast.error("Wallet client is not ready yet.")
+      return
+    }
+
+    try {
+      const result = await claimWinningsOnchain(
+        { walletClient, publicClient },
+        { marketId: market.id }
+      )
+      toast.success("Winnings claimed successfully", {
+        description: `Received ${formatUSD(result.amount)}.`,
+      })
+    } catch (claimError) {
+      const message =
+        claimError instanceof Error
+          ? claimError.message
+          : "Failed to claim winnings."
+      toast.error(message)
+    }
   }
 
   if (isResolved) {
@@ -305,14 +376,18 @@ export function TradePanel({ market }: TradePanelProps) {
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="amount" className="text-xs">
-            Amount (USD)
+            {onchainMode
+              ? side === "buy"
+                ? "Amount (USDC.e)"
+                : "Shares"
+              : "Amount (USD)"}
           </Label>
           <Input
             id="amount"
             type="number"
-            min={MIN_TRADE_AMOUNT}
+            min={onchainMode && side === "sell" ? MIN_SELL_SHARES_AMOUNT : MIN_TRADE_AMOUNT}
             max={MAX_TRADE_AMOUNT}
-            step="1"
+            step={onchainMode && side === "sell" ? "0.01" : "1"}
             placeholder="0.00"
             value={amount}
             onChange={(event) => handleAmountChange(event.target.value)}
@@ -323,17 +398,22 @@ export function TradePanel({ market }: TradePanelProps) {
             <p className="text-xs text-destructive">{amountError}</p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Min ${MIN_TRADE_AMOUNT}, max ${MAX_TRADE_AMOUNT.toLocaleString()}.
+              {onchainMode && side === "sell"
+                ? `Min ${MIN_SELL_SHARES_AMOUNT} shares, max ${MAX_TRADE_AMOUNT.toLocaleString()} shares.`
+                : `Min $${MIN_TRADE_AMOUNT}, max $${MAX_TRADE_AMOUNT.toLocaleString()}.`}
             </p>
           )}
           <div className="flex gap-1">
-            {[10, 25, 50, 100].map((preset) => (
+            {(onchainMode && side === "sell"
+              ? [1, 5, 10, 25]
+              : [10, 25, 50, 100]
+            ).map((preset) => (
               <button
                 key={preset}
                 onClick={() => handleAmountChange(String(preset))}
                 className="rounded border border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
-                ${preset}
+                {onchainMode && side === "sell" ? `${preset} sh` : `$${preset}`}
               </button>
             ))}
           </div>
@@ -372,7 +452,9 @@ export function TradePanel({ market }: TradePanelProps) {
               </span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Est. cost</span>
+              <span className="text-muted-foreground">
+                {side === "buy" ? "Est. cost" : "Est. proceeds"}
+              </span>
               <span className="font-medium text-foreground">
                 {formatUSD(estimate.estimatedCost)}
               </span>
@@ -411,7 +493,9 @@ export function TradePanel({ market }: TradePanelProps) {
         </Button>
 
         <p className="text-center text-[10px] text-muted-foreground">
-          Trades are simulated via mock gateway until contracts are deployed.
+          {onchainMode
+            ? "Trades execute directly against ZenGuessMarketManager on Horizen."
+            : "Trades are simulated via mock gateway until contracts are deployed."}
         </p>
       </CardContent>
     </Card>

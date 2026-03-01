@@ -1,6 +1,6 @@
 # ZenGuess
 
-Production-ready Next.js prediction market frontend for Horizen L3 with contract placeholders and a mock gateway for development.
+Production-ready Next.js prediction market frontend for Horizen L3 with on-chain reads/indexing and wallet-signed writes.
 
 ## Stack
 
@@ -72,11 +72,14 @@ Contract deployment requires:
   - [services/markets/market.status.ts](/c:/Users/Arda/othergithubstuff/zenguess/services/markets/market.status.ts)
 - API routes:
   - `GET /api/markets`
+  - `POST /api/markets` (mock mode only)
   - `GET /api/markets/:id`
   - `GET /api/activity`
   - `GET /api/portfolio?address=`
+  - `POST /api/trades/simulate`
+  - `POST /api/trades` (mock mode only)
 
-Swapping from mock to on-chain is a gateway switch, not a UI rewrite.
+Gateway mode is controlled by `NEXT_PUBLIC_GATEWAY_MODE` (`onchain` or `mock`).
 
 ## Contract Status
 
@@ -91,5 +94,5 @@ The repo now contains a production-grade draft contract implementation and deplo
   - `Bridged USDC (Stargate) (USDC.e)`: `0xDF7108f8B10F9b9eC1aba01CCa057268cbf86B6c`
   - `ZenGuessMarketManager`: `0x8AbEdc4f49EeffC225948784E474d2280bF55E94`
   - Deployment record: [deployments/horizenMainnet.json](/c:/Users/Arda/othergithubstuff/zenguess/deployments/horizenMainnet.json)
-- Frontend remains on `MockMarketGateway` by default (`NEXT_PUBLIC_GATEWAY_MODE=mock`).
-- Switch to on-chain gateway after deployment by setting `NEXT_PUBLIC_GATEWAY_MODE=onchain` and wiring ABI/address in `lib/contracts.ts`.
+- Frontend defaults to on-chain mode (`NEXT_PUBLIC_GATEWAY_MODE=onchain`).
+- Keep `NEXT_PUBLIC_GATEWAY_MODE=mock` for local demo-only flows and CI smoke tests.

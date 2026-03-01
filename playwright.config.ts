@@ -26,6 +26,7 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_ENABLE_MOCK_WALLET: "true",
       NEXT_PUBLIC_ENABLE_DEMO_DATA: "true",
+      NEXT_PUBLIC_GATEWAY_MODE: "mock",
       NEXT_PUBLIC_DEFAULT_CHAIN: "mainnet",
     },
   },
