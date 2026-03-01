@@ -6,12 +6,7 @@ import { MarketCard } from "@/components/market-card"
 import { marketRepository } from "@/services/markets"
 import { formatCompactNumber, formatUSD } from "@/lib/format"
 
-const allMarkets = marketRepository.listMarkets({ status: "open" })
-const featuredMarkets = allMarkets.slice(0, 4)
-const totalVolume = allMarkets.reduce((acc, market) => acc + market.volume, 0)
-const uniqueTraders = new Set(
-  marketRepository.listActivity(250).map((event) => event.actor.toLowerCase())
-).size
+export const dynamic = "force-dynamic"
 
 const features = [
   {
@@ -34,20 +29,26 @@ const features = [
   },
 ]
 
-const stats = [
-  { label: "Total Volume", value: formatUSD(totalVolume) },
-  { label: "Active Markets", value: String(allMarkets.length) },
-  {
-    label: "Total Trades",
-    value: formatCompactNumber(
-      marketRepository.listActivity(250).filter((event) => event.type === "trade")
-        .length
-    ),
-  },
-  { label: "Unique Traders", value: formatCompactNumber(uniqueTraders) },
-]
-
 export default function HomePage() {
+  const allMarkets = marketRepository.listMarkets({ status: "open" })
+  const featuredMarkets = allMarkets.slice(0, 4)
+  const totalVolume = allMarkets.reduce((acc, market) => acc + market.volume, 0)
+  const activity = marketRepository.listActivity(250)
+  const uniqueTraders = new Set(
+    activity.map((event) => event.actor.toLowerCase())
+  ).size
+  const stats = [
+    { label: "Total Volume", value: formatUSD(totalVolume) },
+    { label: "Active Markets", value: String(allMarkets.length) },
+    {
+      label: "Total Trades",
+      value: formatCompactNumber(
+        activity.filter((event) => event.type === "trade").length
+      ),
+    },
+    { label: "Unique Traders", value: formatCompactNumber(uniqueTraders) },
+  ]
+
   return (
     <div className="flex flex-col gap-12">
       {/* Hero */}

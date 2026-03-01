@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 const clientSchema = z.object({
-  NEXT_PUBLIC_DEFAULT_CHAIN: z.enum(["mainnet", "testnet"]).default("testnet"),
+  NEXT_PUBLIC_DEFAULT_CHAIN: z.enum(["mainnet", "testnet"]).default("mainnet"),
   NEXT_PUBLIC_HORIZEN_MAINNET_RPC_HTTP: z.string().url(),
   NEXT_PUBLIC_HORIZEN_MAINNET_RPC_WS: z.string().url(),
   NEXT_PUBLIC_HORIZEN_MAINNET_EXPLORER_URL: z.string().url(),
@@ -11,6 +11,7 @@ const clientSchema = z.object({
   NEXT_PUBLIC_HORIZEN_BRIDGE_URL: z.string().url(),
   NEXT_PUBLIC_HORIZEN_TESTNET_FAUCET_URL: z.string().url(),
   NEXT_PUBLIC_ENABLE_MOCK_WALLET: z.enum(["true", "false"]).default("false"),
+  NEXT_PUBLIC_ENABLE_DEMO_DATA: z.enum(["true", "false"]).default("false"),
   NEXT_PUBLIC_GATEWAY_MODE: z.enum(["mock", "onchain"]).default("mock"),
   NEXT_PUBLIC_GOLDSKY_ENDPOINT: z
     .string()
@@ -71,6 +72,9 @@ const parsedClientEnv = clientSchema.safeParse({
     "https://horizen-testnet.hub.caldera.xyz",
   NEXT_PUBLIC_ENABLE_MOCK_WALLET:
     optionalEnv(process.env.NEXT_PUBLIC_ENABLE_MOCK_WALLET),
+  NEXT_PUBLIC_ENABLE_DEMO_DATA: optionalEnv(
+    process.env.NEXT_PUBLIC_ENABLE_DEMO_DATA
+  ),
   NEXT_PUBLIC_GATEWAY_MODE: optionalEnv(process.env.NEXT_PUBLIC_GATEWAY_MODE),
   NEXT_PUBLIC_GOLDSKY_ENDPOINT: optionalEnv(
     process.env.NEXT_PUBLIC_GOLDSKY_ENDPOINT
@@ -88,6 +92,7 @@ const env = parsedClientEnv.data
 export const clientEnv = {
   ...env,
   NEXT_PUBLIC_ENABLE_MOCK_WALLET: env.NEXT_PUBLIC_ENABLE_MOCK_WALLET === "true",
+  NEXT_PUBLIC_ENABLE_DEMO_DATA: env.NEXT_PUBLIC_ENABLE_DEMO_DATA === "true",
   NEXT_PUBLIC_GOLDSKY_ENDPOINT: env.NEXT_PUBLIC_GOLDSKY_ENDPOINT || undefined,
   NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID:
     env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || undefined,

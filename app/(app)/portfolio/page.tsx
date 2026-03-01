@@ -25,16 +25,22 @@ import {
   TrendingUp,
 } from "lucide-react"
 
-const fallbackAddress = "0x1000000000000000000000000000000000000001"
-
 export default function PortfolioPage() {
   const { address, isConnected } = useAccount()
   const [positions, setPositions] = useState<UserPosition[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const portfolioAddress = address ?? fallbackAddress
 
   useEffect(() => {
+    const walletAddress = address
+    if (!walletAddress) {
+      setPositions([])
+      setError(null)
+      setIsLoading(false)
+      return
+    }
+
+    const activeAddress = walletAddress as string
     const controller = new AbortController()
     let active = true
 
@@ -43,8 +49,8 @@ export default function PortfolioPage() {
         setIsLoading(true)
         setError(null)
         const response = await fetch(
-          `/api/portfolio?address=${encodeURIComponent(portfolioAddress)}`,
-          { signal: controller.signal }
+          `/api/portfolio?address=${encodeURIComponent(activeAddress)}`,
+          { signal: controller.signal, cache: "no-store" }
         )
         if (!response.ok) {
           throw new Error("Failed to load portfolio.")
@@ -75,7 +81,7 @@ export default function PortfolioPage() {
       active = false
       controller.abort()
     }
-  }, [portfolioAddress])
+  }, [address])
 
   const openPositions = useMemo(
     () => positions.filter((position) => position.status === "open"),
@@ -121,7 +127,7 @@ export default function PortfolioPage() {
         </p>
         {!isConnected ? (
           <p className="mt-1 text-xs text-muted-foreground">
-            Wallet not connected. Showing demo portfolio data.
+            Connect wallet to load your onchain positions.
           </p>
         ) : null}
       </div>

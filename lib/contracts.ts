@@ -1,10 +1,14 @@
 import type { Abi, Address } from "viem"
-import { marketGateway } from "@/lib/gateways"
 import type {
   CreateMarketInput,
   ListMarketsFilters,
   MarketEntity,
 } from "@/services/markets"
+import type {
+  ClaimWinningsOutput,
+  SimulateTradeOutput,
+  SubmitTradeOutput,
+} from "@/lib/gateways/market-gateway"
 
 export interface MarketContractBundle {
   marketFactory: Address
@@ -94,14 +98,63 @@ export const CONDITIONAL_TOKENS_ABI: Abi = [
   },
 ]
 
+interface ApiEnvelope<T> {
+  data: T
+}
+
+async function parseApiResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    let errorMessage = "Request failed."
+    try {
+      const payload = (await response.json()) as { error?: string }
+      if (payload.error) {
+        errorMessage = payload.error
+      }
+    } catch {
+      // Ignore parse failures and use the fallback error message.
+    }
+    throw new Error(errorMessage)
+  }
+
+  const payload = (await response.json()) as ApiEnvelope<T>
+  return payload.data
+}
+
 export async function listMarkets(
   filters: ListMarketsFilters = {}
 ): Promise<MarketEntity[]> {
-  return marketGateway.listMarkets(filters)
+  const params = new URLSearchParams()
+  if (filters.category && filters.category !== "all") {
+    params.set("category", filters.category)
+  }
+  if (filters.status && filters.status !== "all") {
+    params.set("status", filters.status)
+  }
+  if (filters.sort) {
+    params.set("sort", filters.sort)
+  }
+  if (filters.query?.trim()) {
+    params.set("q", filters.query.trim())
+  }
+
+  const query = params.toString()
+  const response = await fetch(`/api/markets${query ? `?${query}` : ""}`, {
+    cache: "no-store",
+  })
+
+  return parseApiResponse<MarketEntity[]>(response)
 }
 
 export async function getMarket(marketId: string): Promise<MarketEntity | null> {
-  return marketGateway.getMarket(marketId)
+  const response = await fetch(`/api/markets/${marketId}`, {
+    cache: "no-store",
+  })
+
+  if (response.status === 404) {
+    return null
+  }
+
+  return parseApiResponse<MarketEntity>(response)
 }
 
 export async function simulateTrade(params: {
@@ -110,7 +163,15 @@ export async function simulateTrade(params: {
   amount: number
   side: "buy" | "sell"
 }) {
-  return marketGateway.simulateTrade(params)
+  const response = await fetch("/api/trades/simulate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(params),
+  })
+
+  return parseApiResponse<SimulateTradeOutput>(response)
 }
 
 export async function submitTrade(params: {
@@ -121,23 +182,41 @@ export async function submitTrade(params: {
   slippage: number
   traderAddress?: string
 }) {
-  return marketGateway.submitTrade(params)
+  const response = await fetch("/api/trades", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(params),
+  })
+
+  return parseApiResponse<SubmitTradeOutput>(response)
 }
 
 export async function createMarket(input: CreateMarketInput) {
-  return marketGateway.createMarket(input)
+  const response = await fetch("/api/markets", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  })
+
+  return parseApiResponse<MarketEntity>(response)
 }
 
 export async function resolveMarket(input: {
   marketId: string
   resolvedOutcome: number
 }) {
-  return marketGateway.resolveMarket(input)
+  void input
+  throw new Error("Market resolution endpoint is not implemented yet.")
 }
 
 export async function claimWinnings(input: {
   marketId: string
   account: string
 }) {
-  return marketGateway.claimWinnings(input.marketId, input.account)
+  void input
+  return Promise.resolve<ClaimWinningsOutput>({ success: false, amount: 0 })
 }

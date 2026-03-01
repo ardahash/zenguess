@@ -3,6 +3,8 @@ import { z } from "zod"
 import { marketGateway } from "@/lib/gateways"
 import type { MarketCategory, MarketStatus } from "@/services/markets"
 
+export const dynamic = "force-dynamic"
+
 const listMarketsQuerySchema = z.object({
   category: z
     .enum([
@@ -69,13 +71,20 @@ export async function GET(request: Request) {
     query: filters.q,
   })
 
-  return NextResponse.json({
-    data: markets,
-    meta: {
-      total: markets.length,
-      fetchedAt: new Date().toISOString(),
+  return NextResponse.json(
+    {
+      data: markets,
+      meta: {
+        total: markets.length,
+        fetchedAt: new Date().toISOString(),
+      },
     },
-  })
+    {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    }
+  )
 }
 
 // POST /api/markets

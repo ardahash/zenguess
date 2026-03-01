@@ -1,3 +1,5 @@
+import fs from "node:fs"
+import path from "node:path"
 import {
   seedActivity,
   seedMarkets,
@@ -14,6 +16,22 @@ import type {
   PortfolioPositionEntity,
   TradeEntity,
 } from "./market.types"
+
+interface MockStore {
+  markets: MarketEntity[]
+  trades: TradeEntity[]
+  activity: ActivityEventEntity[]
+  positionsByAddress: Record<string, PortfolioPositionEntity[]>
+}
+
+type GlobalStore = typeof globalThis & {
+  __zenguessMockStore?: MockStore
+}
+
+const enableDemoData = process.env.NEXT_PUBLIC_ENABLE_DEMO_DATA === "true"
+const mockStorePath = path.join(process.cwd(), "cache", "market-store.json")
+const isNodeRuntime = typeof process !== "undefined" && Boolean(process.versions?.node)
+const shouldPersistStore = isNodeRuntime && !enableDemoData
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
@@ -32,9 +50,7 @@ function sortMarkets(markets: MarketEntity[], sort: MarketSort): MarketEntity[] 
 
   switch (sort) {
     case "newest":
-      sorted.sort(
-        (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)
-      )
+      sorted.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
       break
     case "ending_soon":
       sorted.sort((a, b) => Date.parse(a.endTime) - Date.parse(b.endTime))
@@ -51,21 +67,111 @@ function sortMarkets(markets: MarketEntity[], sort: MarketSort): MarketEntity[] 
   return sorted
 }
 
+function createInitialStore(): MockStore {
+  return {
+    markets: enableDemoData ? clone(seedMarkets) : [],
+    trades: enableDemoData ? clone(seedTrades) : [],
+    activity: enableDemoData ? clone(seedActivity) : [],
+    positionsByAddress: enableDemoData ? clone(seedPositionsByAddress) : {},
+  }
+}
+
+function isMockStore(value: unknown): value is MockStore {
+  if (!value || typeof value !== "object") {
+    return false
+  }
+
+  const typedValue = value as Partial<MockStore>
+  return (
+    Array.isArray(typedValue.markets) &&
+    Array.isArray(typedValue.trades) &&
+    Array.isArray(typedValue.activity) &&
+    Boolean(typedValue.positionsByAddress) &&
+    typeof typedValue.positionsByAddress === "object"
+  )
+}
+
+function readStoreFromDisk(): MockStore | null {
+  if (!shouldPersistStore) {
+    return null
+  }
+
+  try {
+    if (!fs.existsSync(mockStorePath)) {
+      return null
+    }
+
+    const contents = fs.readFileSync(mockStorePath, "utf8")
+    const parsed = JSON.parse(contents) as unknown
+    if (!isMockStore(parsed)) {
+      return null
+    }
+
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function writeStoreToDisk(store: MockStore): void {
+  if (!shouldPersistStore) {
+    return
+  }
+
+  const storeDirectory = path.dirname(mockStorePath)
+  const tempStorePath = `${mockStorePath}.${process.pid}.${Date.now()}.tmp`
+  fs.mkdirSync(storeDirectory, { recursive: true })
+  fs.writeFileSync(tempStorePath, JSON.stringify(store), "utf8")
+  try {
+    fs.renameSync(tempStorePath, mockStorePath)
+  } catch {
+    if (fs.existsSync(mockStorePath)) {
+      fs.unlinkSync(mockStorePath)
+    }
+    fs.renameSync(tempStorePath, mockStorePath)
+  }
+}
+
 class InMemoryMarketRepository {
-  private markets: MarketEntity[] = clone(seedMarkets)
-  private trades: TradeEntity[] = clone(seedTrades)
-  private activity: ActivityEventEntity[] = clone(seedActivity)
-  private positionsByAddress: Record<string, PortfolioPositionEntity[]> =
-    clone(seedPositionsByAddress)
+  private readonly globalStore: GlobalStore
+  private store: MockStore
+
+  constructor() {
+    this.globalStore = globalThis as GlobalStore
+    const persistedStore = readStoreFromDisk()
+
+    if (!this.globalStore.__zenguessMockStore) {
+      const initialStore = persistedStore ?? createInitialStore()
+      this.globalStore.__zenguessMockStore = initialStore
+      if (!persistedStore) {
+        writeStoreToDisk(initialStore)
+      }
+    } else if (persistedStore) {
+      this.globalStore.__zenguessMockStore = persistedStore
+    }
+
+    this.store = this.globalStore.__zenguessMockStore
+  }
+
+  private syncFromDisk(): void {
+    const persistedStore = readStoreFromDisk()
+    if (!persistedStore) {
+      return
+    }
+
+    this.globalStore.__zenguessMockStore = persistedStore
+    this.store = persistedStore
+  }
+
+  private persistStore(): void {
+    this.globalStore.__zenguessMockStore = this.store
+    writeStoreToDisk(this.store)
+  }
 
   listMarkets(filters: ListMarketsFilters = {}): MarketEntity[] {
-    const {
-      category = "all",
-      status = "all",
-      query,
-      sort = "volume",
-    } = filters
-    let markets = this.markets.map((market) => withDerivedStatus(market))
+    this.syncFromDisk()
+    const { category = "all", status = "all", query, sort = "volume" } = filters
+    let markets = this.store.markets.map((market) => withDerivedStatus(market))
 
     if (category !== "all") {
       markets = markets.filter((market) => market.category === category)
@@ -88,7 +194,8 @@ class InMemoryMarketRepository {
   }
 
   getMarket(marketId: string): MarketEntity | null {
-    const market = this.markets.find((item) => item.id === marketId)
+    this.syncFromDisk()
+    const market = this.store.markets.find((item) => item.id === marketId)
     if (!market) {
       return null
     }
@@ -97,7 +204,8 @@ class InMemoryMarketRepository {
   }
 
   listTradesByMarket(marketId: string): TradeEntity[] {
-    const trades = this.trades
+    this.syncFromDisk()
+    const trades = this.store.trades
       .filter((trade) => trade.marketId === marketId)
       .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp))
 
@@ -105,7 +213,8 @@ class InMemoryMarketRepository {
   }
 
   listActivity(limit: number = 100): ActivityEventEntity[] {
-    const events = [...this.activity]
+    this.syncFromDisk()
+    const events = [...this.store.activity]
       .sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp))
       .slice(0, limit)
 
@@ -113,16 +222,15 @@ class InMemoryMarketRepository {
   }
 
   getPortfolio(address: string): PortfolioPositionEntity[] {
+    this.syncFromDisk()
     const normalized = address.toLowerCase()
-    const positions =
-      this.positionsByAddress[normalized] ??
-      this.positionsByAddress["0x1000000000000000000000000000000000000001"] ??
-      []
+    const positions = this.store.positionsByAddress[normalized] ?? []
 
     return clone(positions)
   }
 
   createMarket(input: CreateMarketInput): MarketEntity {
+    this.syncFromDisk()
     const now = new Date().toISOString()
     const market: MarketEntity = {
       id: `market_${randomUuid().slice(0, 8)}`,
@@ -143,8 +251,8 @@ class InMemoryMarketRepository {
       creatorAddress: input.creatorAddress,
     }
 
-    this.markets.push(market)
-    this.activity.unshift({
+    this.store.markets.push(market)
+    this.store.activity.unshift({
       id: `event_${randomUuid().slice(0, 8)}`,
       type: "market_created",
       marketId: market.id,
@@ -158,17 +266,19 @@ class InMemoryMarketRepository {
       )}`.slice(0, 66) as `0x${string}`,
     })
 
+    this.persistStore()
     return clone(market)
   }
 
   recordTrade(trade: TradeEntity): TradeEntity {
-    this.trades.unshift(trade)
-    const market = this.markets.find((item) => item.id === trade.marketId)
+    this.syncFromDisk()
+    this.store.trades.unshift(trade)
+    const market = this.store.markets.find((item) => item.id === trade.marketId)
     if (market) {
       market.volume += trade.total
     }
 
-    this.activity.unshift({
+    this.store.activity.unshift({
       id: `event_${randomUuid().slice(0, 8)}`,
       type: "trade",
       marketId: trade.marketId,
@@ -186,11 +296,13 @@ class InMemoryMarketRepository {
       },
     })
 
+    this.persistStore()
     return clone(trade)
   }
 
   resolveMarket(marketId: string, resolvedOutcome: number): MarketEntity | null {
-    const market = this.markets.find((item) => item.id === marketId)
+    this.syncFromDisk()
+    const market = this.store.markets.find((item) => item.id === marketId)
     if (!market) {
       return null
     }
@@ -198,6 +310,7 @@ class InMemoryMarketRepository {
     market.status = "resolved"
     market.resolvedOutcome = resolvedOutcome
 
+    this.persistStore()
     return clone(market)
   }
 }

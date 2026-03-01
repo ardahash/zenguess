@@ -25,10 +25,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { createMarket } from "@/lib/contracts"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import type { MarketCategory } from "@/data/types"
+import { clientEnv } from "@/lib/env/client"
 
 const steps = [
   "Question",
@@ -68,6 +68,12 @@ const createMarketFormSchema = z.object({
   initialLiquidity: z.number().finite().positive().max(1_000_000_000),
   tags: z.array(z.string().trim().min(1).max(32)).max(16),
 })
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
 
 export default function CreateMarketPage() {
   const router = useRouter()
@@ -168,24 +174,63 @@ export default function CreateMarketPage() {
     setIsSubmitting(true)
     setStepError(null)
     try {
-      const result = await createMarket({
-        question: payload.question.trim(),
-        description: payload.description.trim(),
-        category: payload.category,
-        endTime: payload.endDateTime.toISOString(),
-        outcomes: payload.outcomes,
-        initialLiquidity: payload.initialLiquidity,
-        resolutionSource: payload.resolutionSource.trim(),
-        tags: payload.tags,
-        creatorAddress:
-          address ?? "0x1000000000000000000000000000000000000001",
+      const response = await fetch("/api/markets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          question: payload.question.trim(),
+          description: payload.description.trim(),
+          category: payload.category,
+          endTime: payload.endDateTime.toISOString(),
+          outcomes: payload.outcomes,
+          initialLiquidity: payload.initialLiquidity,
+          resolutionSource: payload.resolutionSource.trim(),
+          tags: payload.tags,
+          creatorAddress:
+            address ?? "0x1000000000000000000000000000000000000001",
+        }),
       })
-      toast.success("Market created successfully!", {
-        description: `Market ID: ${result.id}`,
-      })
-      router.push(`/markets/${result.id}`)
-    } catch {
-      toast.error("Failed to create market. Please try again.")
+
+      if (!response.ok) {
+        throw new Error("Market creation request failed.")
+      }
+
+      const result: { data: { id: string } } = await response.json()
+
+      let isPersisted = false
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const verifyResponse = await fetch(`/api/markets/${result.data.id}`, {
+          cache: "no-store",
+        })
+        if (verifyResponse.ok) {
+          isPersisted = true
+          break
+        }
+        await sleep(100)
+      }
+
+      if (!isPersisted) {
+        throw new Error("Market was created but could not be loaded. Please retry.")
+      }
+
+      if (clientEnv.NEXT_PUBLIC_GATEWAY_MODE === "mock") {
+        toast.success("Market created in mock mode", {
+          description: `No wallet transaction was sent. Market ID: ${result.data.id}`,
+        })
+      } else {
+        toast.success("Market created successfully!", {
+          description: `Market ID: ${result.data.id}`,
+        })
+      }
+      router.push(`/markets/${result.data.id}`)
+    } catch (createError) {
+      toast.error(
+        createError instanceof Error
+          ? createError.message
+          : "Failed to create market. Please try again."
+      )
     } finally {
       setIsSubmitting(false)
     }

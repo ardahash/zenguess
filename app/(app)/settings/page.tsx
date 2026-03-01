@@ -18,7 +18,7 @@ import { DollarSign, Gauge, Globe, Save } from "lucide-react"
 import { toast } from "sonner"
 
 export default function SettingsPage() {
-  const [network, setNetwork] = useState<"testnet" | "mainnet">("testnet")
+  const [network] = useState<"mainnet">("mainnet")
   const [customRpc, setCustomRpc] = useState("")
   const [slippage, setSlippage] = useState(1)
   const [currency, setCurrency] = useState<"usd" | "zen">("usd")
@@ -50,32 +50,25 @@ export default function SettingsPage() {
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label>Default Network</Label>
-            <Select
-              value={network}
-              onValueChange={(v) => setNetwork(v as "testnet" | "mainnet")}
-            >
+            <Select value={network} disabled>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="testnet">
-                  Horizen Testnet (Chain ID: 2651420)
-                </SelectItem>
                 <SelectItem value="mainnet">
                   Horizen Mainnet (Chain ID: 26514)
                 </SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              Mainnet is locked as default for fast live iteration.
+            </p>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="customRpc">Custom RPC URL (optional)</Label>
             <Input
               id="customRpc"
-              placeholder={
-                network === "testnet"
-                  ? "https://horizen-testnet.rpc.caldera.xyz/http"
-                  : "https://horizen.calderachain.xyz/http"
-              }
+              placeholder="https://horizen.calderachain.xyz/http"
               value={customRpc}
               onChange={(e) => setCustomRpc(e.target.value)}
             />

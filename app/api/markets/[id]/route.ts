@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { marketGateway } from "@/lib/gateways"
 import { marketRepository } from "@/services/markets"
 
+export const dynamic = "force-dynamic"
+
 interface Params {
   params: {
     id: string
@@ -17,10 +19,17 @@ export async function GET(_request: Request, { params }: Params) {
   }
 
   const trades = marketRepository.listTradesByMarket(market.id)
-  return NextResponse.json({
-    data: market,
-    related: {
-      trades,
+  return NextResponse.json(
+    {
+      data: market,
+      related: {
+        trades,
+      },
     },
-  })
+    {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    }
+  )
 }

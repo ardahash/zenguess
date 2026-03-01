@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { marketRepository } from "@/services/markets"
 
+export const dynamic = "force-dynamic"
+
 const portfolioQuerySchema = z.object({
   address: z.string().trim().min(10).max(128),
 })
@@ -24,11 +26,18 @@ export async function GET(request: Request) {
   }
 
   const positions = marketRepository.getPortfolio(parsedQuery.data.address)
-  return NextResponse.json({
-    data: positions,
-    meta: {
-      total: positions.length,
-      fetchedAt: new Date().toISOString(),
+  return NextResponse.json(
+    {
+      data: positions,
+      meta: {
+        total: positions.length,
+        fetchedAt: new Date().toISOString(),
+      },
     },
-  })
+    {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    }
+  )
 }

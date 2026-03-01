@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { marketRepository } from "@/services/markets"
 
+export const dynamic = "force-dynamic"
+
 const activityQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(500).optional(),
 })
@@ -21,11 +23,18 @@ export async function GET(request: Request) {
   }
 
   const activity = marketRepository.listActivity(parsedQuery.data.limit ?? 100)
-  return NextResponse.json({
-    data: activity,
-    meta: {
-      total: activity.length,
-      fetchedAt: new Date().toISOString(),
+  return NextResponse.json(
+    {
+      data: activity,
+      meta: {
+        total: activity.length,
+        fetchedAt: new Date().toISOString(),
+      },
     },
-  })
+    {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    }
+  )
 }

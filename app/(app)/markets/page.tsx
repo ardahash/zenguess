@@ -69,6 +69,7 @@ export default function MarketsPage() {
 
         const response = await fetch(`/api/markets?${params.toString()}`, {
           signal: controller.signal,
+          cache: "no-store",
         })
 
         if (!response.ok) {

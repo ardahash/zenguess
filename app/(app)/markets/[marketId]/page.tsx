@@ -54,6 +54,7 @@ export default function MarketDetailPage() {
         setError(null)
         const response = await fetch(`/api/markets/${marketId}`, {
           signal: controller.signal,
+          cache: "no-store",
         })
 
         if (response.status === 404) {
