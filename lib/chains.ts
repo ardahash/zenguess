@@ -1,84 +1,83 @@
-// Horizen L3 chain definitions
-// OP Stack L3 on Base
+import { defineChain, type Chain } from "viem"
+import { clientEnv } from "@/lib/env/client"
 
-export interface ChainConfig {
-  chainId: number
-  name: string
-  network: "mainnet" | "testnet"
-  rpcHttp: string
-  rpcWs: string
-  explorerUrl: string
-  bridgeUrl?: string
-  faucetUrl?: string
-  nativeCurrency: {
-    name: string
-    symbol: string
-    decimals: number
-  }
-}
-
-export const horizenMainnet: ChainConfig = {
-  chainId: 26514,
+export const horizenMainnet = defineChain({
+  id: 26514,
   name: "Horizen Mainnet",
-  network: "mainnet",
-  rpcHttp:
-    process.env.NEXT_PUBLIC_HORIZEN_RPC_HTTP ||
-    "https://horizen.calderachain.xyz/http",
-  rpcWs:
-    process.env.NEXT_PUBLIC_HORIZEN_RPC_WS ||
-    "wss://horizen.calderachain.xyz/ws",
-  explorerUrl:
-    process.env.NEXT_PUBLIC_EXPLORER_URL ||
-    "https://horizen.calderaexplorer.xyz/",
-  bridgeUrl:
-    process.env.NEXT_PUBLIC_BRIDGE_URL || "https://horizen.hub.caldera.xyz/",
+  network: "horizen-mainnet",
   nativeCurrency: {
     name: "ZEN",
     symbol: "ZEN",
     decimals: 18,
   },
-}
+  rpcUrls: {
+    default: {
+      http: [clientEnv.NEXT_PUBLIC_HORIZEN_MAINNET_RPC_HTTP],
+      webSocket: [clientEnv.NEXT_PUBLIC_HORIZEN_MAINNET_RPC_WS],
+    },
+    public: {
+      http: [clientEnv.NEXT_PUBLIC_HORIZEN_MAINNET_RPC_HTTP],
+      webSocket: [clientEnv.NEXT_PUBLIC_HORIZEN_MAINNET_RPC_WS],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Horizen Explorer",
+      url: clientEnv.NEXT_PUBLIC_HORIZEN_MAINNET_EXPLORER_URL,
+    },
+  },
+})
 
-export const horizenTestnet: ChainConfig = {
-  chainId: 2651420,
+export const horizenTestnet = defineChain({
+  id: 2651420,
   name: "Horizen Testnet",
-  network: "testnet",
-  rpcHttp:
-    process.env.NEXT_PUBLIC_HORIZEN_RPC_HTTP ||
-    "https://horizen-testnet.rpc.caldera.xyz/http",
-  rpcWs:
-    process.env.NEXT_PUBLIC_HORIZEN_RPC_WS ||
-    "wss://horizen-testnet.rpc.caldera.xyz/ws",
-  explorerUrl:
-    process.env.NEXT_PUBLIC_EXPLORER_URL ||
-    "https://horizen-testnet.explorer.caldera.xyz/",
-  faucetUrl: "https://horizen-testnet.hub.caldera.xyz/",
+  network: "horizen-testnet",
   nativeCurrency: {
     name: "ZEN",
     symbol: "ZEN",
     decimals: 18,
   },
+  rpcUrls: {
+    default: {
+      http: [clientEnv.NEXT_PUBLIC_HORIZEN_TESTNET_RPC_HTTP],
+      webSocket: [clientEnv.NEXT_PUBLIC_HORIZEN_TESTNET_RPC_WS],
+    },
+    public: {
+      http: [clientEnv.NEXT_PUBLIC_HORIZEN_TESTNET_RPC_HTTP],
+      webSocket: [clientEnv.NEXT_PUBLIC_HORIZEN_TESTNET_RPC_WS],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Horizen Testnet Explorer",
+      url: clientEnv.NEXT_PUBLIC_HORIZEN_TESTNET_EXPLORER_URL,
+    },
+  },
+  testnet: true,
+})
+
+export const supportedChains = [horizenMainnet, horizenTestnet] as const
+
+export const defaultChain =
+  clientEnv.NEXT_PUBLIC_DEFAULT_CHAIN === "mainnet"
+    ? horizenMainnet
+    : horizenTestnet
+
+export function isSupportedChain(chainId?: number): boolean {
+  return supportedChains.some((chain) => chain.id === chainId)
 }
 
-const defaultNetwork =
-  (process.env.NEXT_PUBLIC_DEFAULT_CHAIN as "mainnet" | "testnet") || "testnet"
-
-export const defaultChain: ChainConfig =
-  defaultNetwork === "mainnet" ? horizenMainnet : horizenTestnet
-
-export function getChain(network: "mainnet" | "testnet"): ChainConfig {
-  return network === "mainnet" ? horizenMainnet : horizenTestnet
+export function getChainById(chainId: number): Chain | undefined {
+  return supportedChains.find((chain) => chain.id === chainId)
 }
 
-export function getExplorerTxUrl(txHash: string, chain?: ChainConfig): string {
-  const c = chain || defaultChain
-  return `${c.explorerUrl}tx/${txHash}`
+export function getExplorerTxUrl(txHash: string, chain: Chain = defaultChain) {
+  return `${chain.blockExplorers?.default.url}/tx/${txHash}`
 }
 
 export function getExplorerAddressUrl(
   address: string,
-  chain?: ChainConfig
-): string {
-  const c = chain || defaultChain
-  return `${c.explorerUrl}address/${address}`
+  chain: Chain = defaultChain
+) {
+  return `${chain.blockExplorers?.default.url}/address/${address}`
 }

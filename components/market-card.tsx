@@ -17,13 +17,17 @@ const categoryColors: Record<string, string> = {
 }
 
 export function MarketCard({ market }: { market: Market }) {
-  const yesOutcome = market.outcomes[0]
-  const noOutcome = market.outcomes[1]
+  const yesOutcome = market.outcomes[0] ?? { label: "Yes", probability: 0.5 }
+  const noOutcome = market.outcomes[1] ?? { label: "No", probability: 0.5 }
   const yesPercent = Math.round(yesOutcome.probability * 100)
   const noPercent = Math.round(noOutcome.probability * 100)
 
   return (
-    <Link href={`/markets/${market.id}`} className="group block">
+    <Link
+      href={`/markets/${market.id}`}
+      className="group block"
+      data-testid={`market-card-${market.id}`}
+    >
       <Card className="transition-all hover:border-primary/30 hover:shadow-md">
         <CardContent className="p-4">
           {/* Header */}

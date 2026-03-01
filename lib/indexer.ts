@@ -1,67 +1,59 @@
-// Indexer abstraction layer
-// Currently returns mock data. Will be replaced with Goldsky subgraph queries.
+import { clientEnv } from "@/lib/env/client"
+import { marketRepository } from "@/services/markets"
+import type { ActivityEvent, Market, Trade, UserPosition } from "@/data/types"
 
-// TODO: Goldsky subgraph will power this module.
-// The subgraph will index events from the MarketFactory and ConditionalTokens contracts.
-// Queries will be made via GraphQL to the Goldsky endpoint.
+const GOLDSKY_ENDPOINT = clientEnv.NEXT_PUBLIC_GOLDSKY_ENDPOINT
 
-import type { Market, Trade, ActivityEvent } from "@/data/types"
-
-const GOLDSKY_ENDPOINT = process.env.NEXT_PUBLIC_GOLDSKY_ENDPOINT || ""
-
-export async function fetchMarkets(): Promise<Market[]> {
-  // TODO: Replace with Goldsky subgraph query:
-  // query { markets(orderBy: volume, orderDirection: desc) { id, question, ... } }
-  if (GOLDSKY_ENDPOINT) {
-    // Real implementation would go here
-    console.log("[ZenGuess] Would fetch from Goldsky:", GOLDSKY_ENDPOINT)
+async function fetchFromGoldsky<T>(query: string): Promise<T | null> {
+  void query
+  if (!GOLDSKY_ENDPOINT) {
+    return null
   }
 
-  // For now, import mock data
-  const { mockMarkets } = await import("@/data/mock-markets")
-  return mockMarkets
+  // TODO: Replace with GraphQL requests when subgraph is available.
+  return null
 }
 
-export async function fetchMarketById(
-  marketId: string
-): Promise<Market | null> {
-  // TODO: Replace with Goldsky subgraph query:
-  // query { market(id: $id) { id, question, ... } }
-  const { mockMarkets } = await import("@/data/mock-markets")
-  return mockMarkets.find((m) => m.id === marketId) || null
+export async function fetchMarkets(): Promise<Market[]> {
+  const fromIndexer = await fetchFromGoldsky<Market[]>("markets")
+  if (fromIndexer) {
+    return fromIndexer
+  }
+  return marketRepository.listMarkets()
 }
 
-export async function fetchTradesByMarket(
-  marketId: string
-): Promise<Trade[]> {
-  // TODO: Replace with Goldsky subgraph query:
-  // query { trades(where: { market: $marketId }) { ... } }
-  const { mockTrades } = await import("@/data/mock-markets")
-  return mockTrades.filter((t) => t.marketId === marketId)
+export async function fetchMarketById(marketId: string): Promise<Market | null> {
+  const fromIndexer = await fetchFromGoldsky<Market>(`market:${marketId}`)
+  if (fromIndexer) {
+    return fromIndexer
+  }
+  return marketRepository.getMarket(marketId)
+}
+
+export async function fetchTradesByMarket(marketId: string): Promise<Trade[]> {
+  const fromIndexer = await fetchFromGoldsky<Trade[]>(`trades:${marketId}`)
+  if (fromIndexer) {
+    return fromIndexer
+  }
+  return marketRepository.listTradesByMarket(marketId)
 }
 
 export async function fetchActivityFeed(): Promise<ActivityEvent[]> {
-  // TODO: Replace with Goldsky subgraph query:
-  // query { events(orderBy: timestamp, orderDirection: desc) { ... } }
-  const { mockActivity } = await import("@/data/mock-markets")
-  return mockActivity
+  const fromIndexer = await fetchFromGoldsky<ActivityEvent[]>("activity")
+  if (fromIndexer) {
+    return fromIndexer
+  }
+  return marketRepository.listActivity()
 }
 
 export async function fetchUserPositions(
-  _userAddress: string
-): Promise<
-  Array<{
-    marketId: string
-    marketTitle: string
-    outcome: string
-    shares: number
-    avgPrice: number
-    currentPrice: number
-    pnl: number
-    status: "open" | "resolved"
-  }>
-> {
-  // TODO: Derive from on-chain ConditionalTokens balances
-  const { mockPositions } = await import("@/data/mock-markets")
-  return mockPositions
+  userAddress: string
+): Promise<UserPosition[]> {
+  const fromIndexer = await fetchFromGoldsky<UserPosition[]>(
+    `portfolio:${userAddress}`
+  )
+  if (fromIndexer) {
+    return fromIndexer
+  }
+  return marketRepository.getPortfolio(userAddress)
 }

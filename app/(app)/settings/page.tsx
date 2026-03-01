@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Settings as SettingsIcon, Globe, Gauge, DollarSign, Save } from "lucide-react"
+import { DollarSign, Gauge, Globe, Save } from "lucide-react"
 import { toast } from "sonner"
 
 export default function SettingsPage() {
@@ -104,7 +104,7 @@ export default function SettingsPage() {
             </div>
             <Slider
               value={[slippage]}
-              onValueChange={(v) => setSlippage(v[0])}
+              onValueChange={(values) => setSlippage(values[0] ?? slippage)}
               min={0.1}
               max={10}
               step={0.1}

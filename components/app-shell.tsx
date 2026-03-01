@@ -11,7 +11,6 @@ import {
   Activity,
   BookOpen,
   Settings,
-  Wallet,
   Menu,
   X,
 } from "lucide-react"
@@ -19,6 +18,9 @@ import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { ConnectWalletButton } from "@/components/wallet/connect-wallet-button"
+import { WrongNetworkBanner } from "@/components/wallet/wrong-network-banner"
+import { FinalityWarning } from "@/components/finality-warning"
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -73,10 +75,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
-            <Button size="sm" className="hidden sm:inline-flex">
-              <Wallet className="mr-1.5 size-4" />
-              Connect Wallet
-            </Button>
+            <div className="hidden sm:block">
+              <ConnectWalletButton compact />
+            </div>
             {/* Mobile menu toggle */}
             <Button
               variant="ghost"
@@ -118,16 +119,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </Link>
               )
             })}
-            <Button size="sm" className="mt-2 w-full">
-              <Wallet className="mr-1.5 size-4" />
-              Connect Wallet
-            </Button>
+            <div className="mt-2">
+              <ConnectWalletButton />
+            </div>
           </nav>
         )}
+        <WrongNetworkBanner />
       </header>
 
       {/* Main content */}
       <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-6">
+        <div className="mb-4">
+          <FinalityWarning />
+        </div>
         {children}
       </main>
 

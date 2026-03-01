@@ -10,7 +10,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts"
-import { generatePriceHistory } from "@/data/mock-markets"
+import { generatePriceHistory } from "@/lib/pricing"
 
 interface OddsChartProps {
   startProb: number

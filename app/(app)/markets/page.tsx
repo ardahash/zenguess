@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Search, SlidersHorizontal } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -13,9 +13,10 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { MarketCard } from "@/components/market-card"
-import { mockMarkets } from "@/data/mock-markets"
 import type { MarketCategory, MarketStatus } from "@/data/types"
 import { cn } from "@/lib/utils"
+import type { MarketEntity } from "@/services/markets"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const categories: Array<{ value: MarketCategory | "all"; label: string }> = [
   { value: "all", label: "All" },
@@ -42,52 +43,67 @@ export default function MarketsPage() {
   const [status, setStatus] = useState<MarketStatus | "all">("all")
   const [sort, setSort] = useState<SortOption>("volume")
   const [showFilters, setShowFilters] = useState(false)
+  const [markets, setMarkets] = useState<MarketEntity[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [reloadNonce, setReloadNonce] = useState(0)
 
-  const filteredMarkets = useMemo(() => {
-    let markets = [...mockMarkets]
+  useEffect(() => {
+    const controller = new AbortController()
+    const timeout = setTimeout(async () => {
+      try {
+        setIsLoading(true)
+        setError(null)
 
-    // Search
-    if (search) {
-      const q = search.toLowerCase()
-      markets = markets.filter(
-        (m) =>
-          m.question.toLowerCase().includes(q) ||
-          m.tags.some((t) => t.toLowerCase().includes(q))
-      )
-    }
+        const params = new URLSearchParams()
+        if (category !== "all") {
+          params.set("category", category)
+        }
+        if (status !== "all") {
+          params.set("status", status)
+        }
+        params.set("sort", sort)
+        if (search.trim()) {
+          params.set("q", search.trim())
+        }
 
-    // Category
-    if (category !== "all") {
-      markets = markets.filter((m) => m.category === category)
-    }
+        const response = await fetch(`/api/markets?${params.toString()}`, {
+          signal: controller.signal,
+        })
 
-    // Status
-    if (status !== "all") {
-      markets = markets.filter((m) => m.status === status)
-    }
+        if (!response.ok) {
+          throw new Error("Failed to load markets.")
+        }
 
-    // Sort
-    switch (sort) {
-      case "volume":
-        markets.sort((a, b) => b.volume - a.volume)
-        break
-      case "newest":
-        markets.sort(
-          (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+        const payload: { data: MarketEntity[] } = await response.json()
+        setMarkets(payload.data)
+      } catch (fetchError) {
+        if (controller.signal.aborted) {
+          return
+        }
+
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "Unable to load markets."
         )
-        break
-      case "ending_soon":
-        markets.sort(
-          (a, b) => a.endTime.getTime() - b.endTime.getTime()
-        )
-        break
-      case "liquidity":
-        markets.sort((a, b) => b.liquidity - a.liquidity)
-        break
-    }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false)
+        }
+      }
+    }, 250)
 
-    return markets
-  }, [search, category, status, sort])
+    return () => {
+      controller.abort()
+      clearTimeout(timeout)
+    }
+  }, [category, reloadNonce, search, sort, status])
+
+  const hasFilters = useMemo(
+    () => Boolean(search.trim() || category !== "all" || status !== "all"),
+    [category, search, status]
+  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -179,7 +195,7 @@ export default function MarketsPage() {
 
       {/* Results count */}
       <div className="flex items-center gap-2">
-        <Badge variant="secondary">{filteredMarkets.length} markets</Badge>
+        <Badge variant="secondary">{markets.length} markets</Badge>
         {search && (
           <Button
             variant="ghost"
@@ -193,17 +209,45 @@ export default function MarketsPage() {
       </div>
 
       {/* Market grid */}
-      {filteredMarkets.length > 0 ? (
+      {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredMarkets.map((market) => (
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="rounded-lg border p-4">
+              <Skeleton className="mb-3 h-5 w-24" />
+              <Skeleton className="mb-2 h-4 w-full" />
+              <Skeleton className="mb-4 h-4 w-4/5" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 py-16 text-center">
+          <p className="text-sm font-medium text-foreground">{error}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setReloadNonce((current) => current + 1)
+            }}
+          >
+            Retry
+          </Button>
+        </div>
+      ) : markets.length > 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {markets.map((market) => (
             <MarketCard key={market.id} market={market} />
           ))}
         </div>
       ) : (
         <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-16 text-center">
-          <p className="text-sm font-medium text-foreground">No markets found</p>
+          <p className="text-sm font-medium text-foreground">
+            {hasFilters ? "No markets found" : "No markets yet"}
+          </p>
           <p className="text-xs text-muted-foreground">
-            Try adjusting your filters or search query
+            {hasFilters
+              ? "Try adjusting your filters or search query"
+              : "Markets will appear here once created."}
           </p>
         </div>
       )}

@@ -1,98 +1,116 @@
 import { NextResponse } from "next/server"
-import { mockMarkets } from "@/data/mock-markets"
+import { z } from "zod"
+import { marketGateway } from "@/lib/gateways"
+import type { MarketCategory, MarketStatus } from "@/services/markets"
 
-// GET /api/markets - List markets
+const listMarketsQuerySchema = z.object({
+  category: z
+    .enum([
+      "all",
+      "crypto",
+      "politics",
+      "sports",
+      "science",
+      "culture",
+      "economics",
+      "other",
+    ])
+    .optional(),
+  status: z.enum(["all", "open", "closed", "resolved"]).optional(),
+  sort: z.enum(["volume", "newest", "ending_soon", "liquidity"]).optional(),
+  q: z.string().trim().max(128).optional(),
+})
+
+const createMarketSchema = z.object({
+  question: z.string().trim().min(10).max(280),
+  description: z.string().trim().max(5000).default(""),
+  category: z.enum([
+    "crypto",
+    "politics",
+    "sports",
+    "science",
+    "culture",
+    "economics",
+    "other",
+  ]),
+  endTime: z.string().datetime(),
+  outcomes: z.array(z.string().trim().min(1).max(64)).min(2).max(8),
+  initialLiquidity: z.number().finite().positive().max(1_000_000_000),
+  resolutionSource: z.string().trim().min(3).max(500),
+  creatorAddress: z.string().trim().min(10).max(128).optional(),
+  tags: z.array(z.string().trim().min(1).max(32)).max(16).optional(),
+})
+
+// GET /api/markets
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const category = searchParams.get("category")
-  const status = searchParams.get("status")
-  const sort = searchParams.get("sort") || "volume"
-  const search = searchParams.get("q")
-
-  let markets = [...mockMarkets]
-
-  // Filter by category
-  if (category && category !== "all") {
-    markets = markets.filter((m) => m.category === category)
-  }
-
-  // Filter by status
-  if (status && status !== "all") {
-    markets = markets.filter((m) => m.status === status)
-  }
-
-  // Search
-  if (search) {
-    const q = search.toLowerCase()
-    markets = markets.filter(
-      (m) =>
-        m.question.toLowerCase().includes(q) ||
-        m.tags.some((t) => t.includes(q))
-    )
-  }
-
-  // Sort
-  switch (sort) {
-    case "volume":
-      markets.sort((a, b) => b.volume - a.volume)
-      break
-    case "newest":
-      markets.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      break
-    case "ending_soon":
-      markets.sort((a, b) => a.endTime.getTime() - b.endTime.getTime())
-      break
-    case "liquidity":
-      markets.sort((a, b) => b.liquidity - a.liquidity)
-      break
-  }
-
-  return NextResponse.json({
-    markets,
-    total: markets.length,
+  const url = new URL(request.url)
+  const parsedQuery = listMarketsQuerySchema.safeParse({
+    category: url.searchParams.get("category") ?? undefined,
+    status: url.searchParams.get("status") ?? undefined,
+    sort: url.searchParams.get("sort") ?? undefined,
+    q: url.searchParams.get("q") ?? undefined,
   })
-}
 
-// POST /api/markets - Create a new market (placeholder)
-export async function POST(request: Request) {
-  try {
-    const body = await request.json()
-
-    // Validate required fields
-    const { question, category, endTime, outcomes, initialLiquidity } = body
-
-    if (!question || !category || !endTime || !outcomes) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      )
-    }
-
-    // TODO: Replace with actual smart contract call
-    // This would call MarketFactory.createMarket() via the Horizen RPC
-    const newMarket = {
-      id: `market_${Date.now()}`,
-      question,
-      category,
-      status: "open",
-      outcomes: outcomes.map((label: string, i: number) => ({
-        label,
-        probability: 1 / outcomes.length,
-      })),
-      endTime: new Date(endTime),
-      createdAt: new Date(),
-      volume: 0,
-      liquidity: initialLiquidity || 0,
-      tags: body.tags || [],
-      creatorAddress: "0x0000000000000000000000000000000000000000",
-    }
-
-    // In production, this would be persisted to the subgraph index
-    return NextResponse.json({ market: newMarket }, { status: 201 })
-  } catch {
+  if (!parsedQuery.success) {
     return NextResponse.json(
-      { error: "Invalid request body" },
+      {
+        error: "Invalid query parameters",
+        details: parsedQuery.error.flatten(),
+      },
       { status: 400 }
     )
   }
+
+  const filters = parsedQuery.data
+  const markets = await marketGateway.listMarkets({
+    category: filters.category as MarketCategory | "all" | undefined,
+    status: filters.status as MarketStatus | "all" | undefined,
+    sort: filters.sort,
+    query: filters.q,
+  })
+
+  return NextResponse.json({
+    data: markets,
+    meta: {
+      total: markets.length,
+      fetchedAt: new Date().toISOString(),
+    },
+  })
+}
+
+// POST /api/markets
+export async function POST(request: Request) {
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+  }
+
+  const parsedBody = createMarketSchema.safeParse(body)
+  if (!parsedBody.success) {
+    return NextResponse.json(
+      {
+        error: "Invalid market payload",
+        details: parsedBody.error.flatten(),
+      },
+      { status: 400 }
+    )
+  }
+
+  const payload = parsedBody.data
+  const market = await marketGateway.createMarket({
+    question: payload.question,
+    description: payload.description,
+    category: payload.category,
+    endTime: payload.endTime,
+    outcomes: payload.outcomes,
+    initialLiquidity: payload.initialLiquidity,
+    resolutionSource: payload.resolutionSource,
+    creatorAddress:
+      payload.creatorAddress ?? "0x1000000000000000000000000000000000000001",
+    tags: payload.tags ?? [],
+  })
+
+  return NextResponse.json({ data: market }, { status: 201 })
 }

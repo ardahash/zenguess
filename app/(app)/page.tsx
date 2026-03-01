@@ -3,9 +3,15 @@ import { ArrowRight, BarChart3, Shield, Zap, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { MarketCard } from "@/components/market-card"
-import { mockMarkets } from "@/data/mock-markets"
+import { marketRepository } from "@/services/markets"
+import { formatCompactNumber, formatUSD } from "@/lib/format"
 
-const featuredMarkets = mockMarkets.filter((m) => m.status === "open").slice(0, 4)
+const allMarkets = marketRepository.listMarkets({ status: "open" })
+const featuredMarkets = allMarkets.slice(0, 4)
+const totalVolume = allMarkets.reduce((acc, market) => acc + market.volume, 0)
+const uniqueTraders = new Set(
+  marketRepository.listActivity(250).map((event) => event.actor.toLowerCase())
+).size
 
 const features = [
   {
@@ -29,10 +35,16 @@ const features = [
 ]
 
 const stats = [
-  { label: "Total Volume", value: "$19.8M" },
-  { label: "Active Markets", value: "7" },
-  { label: "Total Trades", value: "12.4K" },
-  { label: "Unique Traders", value: "3.2K" },
+  { label: "Total Volume", value: formatUSD(totalVolume) },
+  { label: "Active Markets", value: String(allMarkets.length) },
+  {
+    label: "Total Trades",
+    value: formatCompactNumber(
+      marketRepository.listActivity(250).filter((event) => event.type === "trade")
+        .length
+    ),
+  },
+  { label: "Unique Traders", value: formatCompactNumber(uniqueTraders) },
 ]
 
 export default function HomePage() {
@@ -90,9 +102,17 @@ export default function HomePage() {
           </Button>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {featuredMarkets.map((market) => (
-            <MarketCard key={market.id} market={market} />
-          ))}
+          {featuredMarkets.length > 0 ? (
+            featuredMarkets.map((market) => (
+              <MarketCard key={market.id} market={market} />
+            ))
+          ) : (
+            <Card className="sm:col-span-2 lg:col-span-4">
+              <CardContent className="p-6 text-sm text-muted-foreground">
+                No featured markets available yet.
+              </CardContent>
+            </Card>
+          )}
         </div>
       </section>
 

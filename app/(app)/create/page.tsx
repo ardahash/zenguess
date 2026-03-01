@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAccount } from "wagmi"
+import { z } from "zod"
 import {
   ArrowLeft,
   ArrowRight,
@@ -47,10 +49,32 @@ const categories: Array<{ value: MarketCategory; label: string }> = [
   { value: "other", label: "Other" },
 ]
 
+const createMarketFormSchema = z.object({
+  question: z.string().trim().min(10).max(280),
+  description: z.string().trim().max(5000),
+  category: z.enum([
+    "crypto",
+    "politics",
+    "sports",
+    "science",
+    "culture",
+    "economics",
+    "other",
+  ]),
+  endDate: z.string().min(1),
+  endTime: z.string().min(1),
+  resolutionSource: z.string().trim().min(3).max(500),
+  outcomes: z.array(z.string().trim().min(1).max(64)).min(2).max(8),
+  initialLiquidity: z.number().finite().positive().max(1_000_000_000),
+  tags: z.array(z.string().trim().min(1).max(32)).max(16),
+})
+
 export default function CreateMarketPage() {
   const router = useRouter()
+  const { address } = useAccount()
   const [step, setStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [stepError, setStepError] = useState<string | null>(null)
 
   // Form state
   const [question, setQuestion] = useState("")
@@ -91,6 +115,23 @@ export default function CreateMarketPage() {
     setOutcomes(outcomes.filter((_, i) => i !== index))
   }
 
+  function buildPayload() {
+    const normalizedOutcomes = outcomes.map((outcome) => outcome.trim())
+    const endDateTime = new Date(`${endDate}T${endTime}:00Z`)
+    return {
+      question,
+      description,
+      category,
+      endDate,
+      endTime,
+      resolutionSource,
+      outcomes: normalizedOutcomes,
+      initialLiquidity: Number(liquidity),
+      tags,
+      endDateTime,
+    }
+  }
+
   function canProceed(): boolean {
     switch (step) {
       case 0:
@@ -109,22 +150,40 @@ export default function CreateMarketPage() {
   }
 
   async function handleCreate() {
+    const payload = buildPayload()
+    const parsed = createMarketFormSchema.safeParse({
+      ...payload,
+      description: payload.description.trim(),
+    })
+    if (!parsed.success) {
+      setStepError(parsed.error.issues[0]?.message ?? "Invalid market inputs.")
+      return
+    }
+
+    if (payload.endDateTime.getTime() <= Date.now()) {
+      setStepError("End date must be in the future.")
+      return
+    }
+
     setIsSubmitting(true)
+    setStepError(null)
     try {
-      const endDateTime = new Date(`${endDate}T${endTime}:00Z`)
       const result = await createMarket({
-        question,
-        category,
-        endTime: endDateTime.getTime(),
-        outcomes,
-        initialLiquidity: parseFloat(liquidity),
+        question: payload.question.trim(),
+        description: payload.description.trim(),
+        category: payload.category,
+        endTime: payload.endDateTime.toISOString(),
+        outcomes: payload.outcomes,
+        initialLiquidity: payload.initialLiquidity,
+        resolutionSource: payload.resolutionSource.trim(),
+        tags: payload.tags,
+        creatorAddress:
+          address ?? "0x1000000000000000000000000000000000000001",
       })
-      if (result.success) {
-        toast.success("Market created successfully!", {
-          description: `Market ID: ${result.marketId}`,
-        })
-        router.push("/markets")
-      }
+      toast.success("Market created successfully!", {
+        description: `Market ID: ${result.id}`,
+      })
+      router.push(`/markets/${result.id}`)
     } catch {
       toast.error("Failed to create market. Please try again.")
     } finally {
@@ -416,12 +475,16 @@ export default function CreateMarketPage() {
           )}
         </CardContent>
       </Card>
+      {stepError ? <p className="text-sm text-destructive">{stepError}</p> : null}
 
       {/* Navigation buttons */}
       <div className="flex justify-between">
         <Button
           variant="outline"
-          onClick={() => setStep(Math.max(0, step - 1))}
+          onClick={() => {
+            setStepError(null)
+            setStep(Math.max(0, step - 1))
+          }}
           disabled={step === 0}
         >
           <ArrowLeft className="mr-1 size-4" />
@@ -429,7 +492,10 @@ export default function CreateMarketPage() {
         </Button>
         {step < steps.length - 1 ? (
           <Button
-            onClick={() => setStep(step + 1)}
+            onClick={() => {
+              setStepError(null)
+              setStep(step + 1)
+            }}
             disabled={!canProceed()}
           >
             Next

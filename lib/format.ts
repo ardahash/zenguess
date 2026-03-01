@@ -1,5 +1,9 @@
 // Formatting utilities for ZenGuess
 
+function toDate(value: Date | string): Date {
+  return value instanceof Date ? value : new Date(value)
+}
+
 export function formatUSD(amount: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -23,14 +27,19 @@ export function formatPercentRaw(value: number): string {
   return `${value.toFixed(1)}%`
 }
 
+export function formatOddsPercentage(probability: number): string {
+  const clamped = Math.max(0, Math.min(1, probability))
+  return `${Math.round(clamped * 100)}%`
+}
+
 export function formatAddress(address: string): string {
   if (!address || address.length < 10) return address
   return `${address.slice(0, 6)}...${address.slice(-4)}`
 }
 
-export function formatTimeRemaining(endTime: Date): string {
+export function formatTimeRemaining(endTime: Date | string): string {
   const now = new Date()
-  const diff = endTime.getTime() - now.getTime()
+  const diff = toDate(endTime).getTime() - now.getTime()
 
   if (diff <= 0) return "Ended"
 
@@ -44,20 +53,20 @@ export function formatTimeRemaining(endTime: Date): string {
   return `${minutes}m left`
 }
 
-export function formatDate(date: Date): string {
+export function formatDate(date: Date | string): string {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(date)
+  }).format(toDate(date))
 }
 
-export function formatDatetime(date: Date): string {
+export function formatDatetime(date: Date | string): string {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
     hour: "numeric",
     minute: "2-digit",
-  }).format(date)
+  }).format(toDate(date))
 }

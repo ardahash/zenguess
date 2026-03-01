@@ -1,12 +1,16 @@
 import type { Metadata, Viewport } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Inter, JetBrains_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Web3Provider } from "@/components/providers/web3-provider"
 import { Toaster } from "sonner"
+import { serverEnv } from "@/lib/env/server"
 import "./globals.css"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" })
+
+void serverEnv
 
 export const metadata: Metadata = {
   title: {
@@ -41,16 +45,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-sans antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-          <Toaster position="bottom-right" />
-        </ThemeProvider>
+      <body className={`${inter.variable} ${mono.variable} font-sans antialiased`}>
+        <Web3Provider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {children}
+            <Toaster position="bottom-right" richColors closeButton />
+          </ThemeProvider>
+        </Web3Provider>
         <Analytics />
       </body>
     </html>

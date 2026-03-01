@@ -1,24 +1,44 @@
-// Placeholder contract addresses and ABIs
-// TODO: Codex will plug in real ABIs and addresses here
+import type { Abi, Address } from "viem"
+import { marketGateway } from "@/lib/gateways"
+import type {
+  CreateMarketInput,
+  ListMarketsFilters,
+  MarketEntity,
+} from "@/services/markets"
 
-export const CONTRACT_ADDRESSES = {
-  // Main prediction market factory
-  marketFactory: "0x0000000000000000000000000000000000000000" as `0x${string}`,
-  // Conditional token framework
-  conditionalTokens:
-    "0x0000000000000000000000000000000000000000" as `0x${string}`,
-  // AMM / CPMM for trading
-  ammFactory: "0x0000000000000000000000000000000000000000" as `0x${string}`,
-  // Collateral token (e.g., USDC or wrapped ZEN)
-  collateralToken:
-    "0x0000000000000000000000000000000000000000" as `0x${string}`,
-} as const
+export interface MarketContractBundle {
+  marketFactory: Address
+  conditionalTokens: Address
+  ammFactory: Address
+  collateralToken: Address
+}
 
-// Placeholder ABI fragments - Codex will generate full ABIs
-export const MARKET_FACTORY_ABI = [
+export const CONTRACT_ADDRESSES: Record<
+  "mainnet" | "testnet",
+  MarketContractBundle
+> = {
+  mainnet: {
+    // Deployed on 2026-03-01 to Horizen mainnet as ZenGuessMarketManager.
+    marketFactory: "0x8AbEdc4f49EeffC225948784E474d2280bF55E94",
+    conditionalTokens: "0x0000000000000000000000000000000000000000",
+    ammFactory: "0x0000000000000000000000000000000000000000",
+    collateralToken: "0xDF7108f8B10F9b9eC1aba01CCa057268cbf86B6c",
+  },
+  testnet: {
+    // Deployed on 2026-03-01 to Horizen testnet as ZenGuessMarketManager.
+    marketFactory: "0xFe89369Fc2A2013D65dfe4C6Cf953b15e5175B59",
+    conditionalTokens: "0x0000000000000000000000000000000000000000",
+    ammFactory: "0x0000000000000000000000000000000000000000",
+    collateralToken: "0x6B518E35d352EDbdB68839445839f5a254eDBa71",
+  },
+}
+
+// TODO: Paste final ABI fragments generated from deployed contracts.
+export const MARKET_FACTORY_ABI: Abi = [
   {
-    name: "createMarket",
     type: "function",
+    name: "createMarket",
+    stateMutability: "nonpayable",
     inputs: [
       { name: "question", type: "string" },
       { name: "endTime", type: "uint256" },
@@ -28,20 +48,23 @@ export const MARKET_FACTORY_ABI = [
     outputs: [{ name: "marketId", type: "bytes32" }],
   },
   {
-    name: "resolveMarket",
     type: "function",
+    name: "resolveMarket",
+    stateMutability: "nonpayable",
     inputs: [
       { name: "marketId", type: "bytes32" },
       { name: "outcome", type: "uint256" },
     ],
     outputs: [],
   },
-] as const
+]
 
-export const CONDITIONAL_TOKENS_ABI = [
+// TODO: Paste final conditional token ABI fragments.
+export const CONDITIONAL_TOKENS_ABI: Abi = [
   {
-    name: "buyShares",
     type: "function",
+    name: "buyShares",
+    stateMutability: "nonpayable",
     inputs: [
       { name: "marketId", type: "bytes32" },
       { name: "outcomeIndex", type: "uint256" },
@@ -51,8 +74,9 @@ export const CONDITIONAL_TOKENS_ABI = [
     outputs: [{ name: "cost", type: "uint256" }],
   },
   {
-    name: "sellShares",
     type: "function",
+    name: "sellShares",
+    stateMutability: "nonpayable",
     inputs: [
       { name: "marketId", type: "bytes32" },
       { name: "outcomeIndex", type: "uint256" },
@@ -62,38 +86,31 @@ export const CONDITIONAL_TOKENS_ABI = [
     outputs: [{ name: "returnAmount", type: "uint256" }],
   },
   {
-    name: "redeemPositions",
     type: "function",
+    name: "redeemPositions",
+    stateMutability: "nonpayable",
     inputs: [{ name: "marketId", type: "bytes32" }],
     outputs: [],
   },
-] as const
+]
 
-// ---- Placeholder / Stub functions ----
-// These simulate contract interactions. Replace with real wagmi hooks later.
+export async function listMarkets(
+  filters: ListMarketsFilters = {}
+): Promise<MarketEntity[]> {
+  return marketGateway.listMarkets(filters)
+}
+
+export async function getMarket(marketId: string): Promise<MarketEntity | null> {
+  return marketGateway.getMarket(marketId)
+}
 
 export async function simulateTrade(params: {
   marketId: string
   outcomeIndex: number
   amount: number
   side: "buy" | "sell"
-}): Promise<{ estimatedCost: number; estimatedShares: number; fee: number }> {
-  // Stub: simple constant product pricing simulation
-  const price = params.outcomeIndex === 0 ? 0.65 : 0.35
-  const fee = params.amount * 0.02
-  const estimatedShares =
-    params.side === "buy"
-      ? params.amount / price
-      : params.amount * price
-  const estimatedCost =
-    params.side === "buy" ? params.amount + fee : params.amount - fee
-
-  console.log("[ZenGuess] simulateTrade:", params, "->", {
-    estimatedCost,
-    estimatedShares,
-    fee,
-  })
-  return { estimatedCost, estimatedShares, fee }
+}) {
+  return marketGateway.simulateTrade(params)
 }
 
 export async function submitTrade(params: {
@@ -102,34 +119,25 @@ export async function submitTrade(params: {
   amount: number
   side: "buy" | "sell"
   slippage: number
-}): Promise<{ success: boolean; txHash: string }> {
-  // Stub: pretend we submitted a tx
-  console.log("[ZenGuess] submitTrade:", params)
-  await new Promise((r) => setTimeout(r, 1500))
-  const fakeTxHash = `0x${Array.from({ length: 64 }, () =>
-    Math.floor(Math.random() * 16).toString(16)
-  ).join("")}`
-  return { success: true, txHash: fakeTxHash }
+  traderAddress?: string
+}) {
+  return marketGateway.submitTrade(params)
 }
 
-export async function createMarket(params: {
-  question: string
-  category: string
-  endTime: number
-  outcomes: string[]
-  initialLiquidity: number
-}): Promise<{ success: boolean; marketId: string }> {
-  // Stub: pretend we created a market on-chain
-  console.log("[ZenGuess] createMarket:", params)
-  await new Promise((r) => setTimeout(r, 2000))
-  const fakeMarketId = `market_${Date.now()}`
-  return { success: true, marketId: fakeMarketId }
+export async function createMarket(input: CreateMarketInput) {
+  return marketGateway.createMarket(input)
 }
 
-export async function claimWinnings(params: {
+export async function resolveMarket(input: {
   marketId: string
-}): Promise<{ success: boolean; amount: number }> {
-  console.log("[ZenGuess] claimWinnings:", params)
-  await new Promise((r) => setTimeout(r, 1000))
-  return { success: true, amount: 150.0 }
+  resolvedOutcome: number
+}) {
+  return marketGateway.resolveMarket(input)
+}
+
+export async function claimWinnings(input: {
+  marketId: string
+  account: string
+}) {
+  return marketGateway.claimWinnings(input.marketId, input.account)
 }
