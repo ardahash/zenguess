@@ -3,8 +3,10 @@ import { ArrowRight, BarChart3, Shield, Zap, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { MarketCard } from "@/components/market-card"
+import { clientEnv } from "@/lib/env/client"
 import { marketRepository } from "@/services/markets"
 import { formatCompactNumber, formatUSD } from "@/lib/format"
+import { fetchOnchainActivity, fetchOnchainMarkets } from "@/lib/onchain/indexer"
 
 export const dynamic = "force-dynamic"
 
@@ -29,11 +31,19 @@ const features = [
   },
 ]
 
-export default function HomePage() {
-  const allMarkets = marketRepository.listMarkets({ status: "open" })
+export default async function HomePage() {
+  const [allMarkets, activity] =
+    clientEnv.NEXT_PUBLIC_GATEWAY_MODE === "onchain"
+      ? await Promise.all([
+          fetchOnchainMarkets({ status: "open", sort: "volume" }),
+          fetchOnchainActivity(250),
+        ])
+      : [
+          marketRepository.listMarkets({ status: "open" }),
+          marketRepository.listActivity(250),
+        ]
   const featuredMarkets = allMarkets.slice(0, 4)
   const totalVolume = allMarkets.reduce((acc, market) => acc + market.volume, 0)
-  const activity = marketRepository.listActivity(250)
   const uniqueTraders = new Set(
     activity.map((event) => event.actor.toLowerCase())
   ).size

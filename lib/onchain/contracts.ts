@@ -10,12 +10,12 @@ export interface MarketContractBundle {
 export const CONTRACT_ADDRESSES: Record<"mainnet" | "testnet", MarketContractBundle> =
   {
     mainnet: {
-      marketManager: "0x8AbEdc4f49EeffC225948784E474d2280bF55E94",
-      collateralToken: "0xDF7108f8B10F9b9eC1aba01CCa057268cbf86B6c",
+      marketManager: "0xE3dB30ff10E851aA1f3e50Ed212281CB5e98a9E8",
+      collateralToken: "0x4200000000000000000000000000000000000006",
     },
     testnet: {
-      marketManager: "0xFe89369Fc2A2013D65dfe4C6Cf953b15e5175B59",
-      collateralToken: "0x6B518E35d352EDbdB68839445839f5a254eDBa71",
+      marketManager: "0xba7147BCE0e12414e7612Ab72D386FeBAdB3322D",
+      collateralToken: "0x4200000000000000000000000000000000000006",
     },
   }
 
@@ -234,6 +234,13 @@ export const erc20Abi = [
   },
   {
     type: "function",
+    name: "balanceOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
     name: "allowance",
     stateMutability: "view",
     inputs: [
@@ -251,6 +258,24 @@ export const erc20Abi = [
       { name: "amount", type: "uint256" },
     ],
     outputs: [{ name: "", type: "bool" }],
+  },
+] as const satisfies Abi
+
+export const wethAbi = [
+  ...erc20Abi,
+  {
+    type: "function",
+    name: "deposit",
+    stateMutability: "payable",
+    inputs: [],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "withdraw",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "wad", type: "uint256" }],
+    outputs: [],
   },
 ] as const satisfies Abi
 

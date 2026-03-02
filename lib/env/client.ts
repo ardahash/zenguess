@@ -13,6 +13,17 @@ const clientSchema = z.object({
   NEXT_PUBLIC_ENABLE_MOCK_WALLET: z.enum(["true", "false"]).default("false"),
   NEXT_PUBLIC_ENABLE_DEMO_DATA: z.enum(["true", "false"]).default("false"),
   NEXT_PUBLIC_GATEWAY_MODE: z.enum(["mock", "onchain"]).default("onchain"),
+  NEXT_PUBLIC_BETTING_TOKEN_SYMBOL: z.string().trim().min(1).max(16).default("ETH"),
+  NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_MAINNET: z
+    .string()
+    .regex(/^\d+$/)
+    .optional()
+    .or(z.literal("")),
+  NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_TESTNET: z
+    .string()
+    .regex(/^\d+$/)
+    .optional()
+    .or(z.literal("")),
   NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK: z
     .string()
     .regex(/^\d+$/)
@@ -81,6 +92,15 @@ const parsedClientEnv = clientSchema.safeParse({
     process.env.NEXT_PUBLIC_ENABLE_DEMO_DATA
   ),
   NEXT_PUBLIC_GATEWAY_MODE: optionalEnv(process.env.NEXT_PUBLIC_GATEWAY_MODE),
+  NEXT_PUBLIC_BETTING_TOKEN_SYMBOL: optionalEnv(
+    process.env.NEXT_PUBLIC_BETTING_TOKEN_SYMBOL
+  ),
+  NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_MAINNET: optionalEnv(
+    process.env.NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_MAINNET
+  ),
+  NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_TESTNET: optionalEnv(
+    process.env.NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_TESTNET
+  ),
   NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK: optionalEnv(
     process.env.NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK
   ),
@@ -101,6 +121,11 @@ export const clientEnv = {
   ...env,
   NEXT_PUBLIC_ENABLE_MOCK_WALLET: env.NEXT_PUBLIC_ENABLE_MOCK_WALLET === "true",
   NEXT_PUBLIC_ENABLE_DEMO_DATA: env.NEXT_PUBLIC_ENABLE_DEMO_DATA === "true",
+  NEXT_PUBLIC_BETTING_TOKEN_SYMBOL: env.NEXT_PUBLIC_BETTING_TOKEN_SYMBOL,
+  NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_MAINNET:
+    env.NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_MAINNET || undefined,
+  NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_TESTNET:
+    env.NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_TESTNET || undefined,
   NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK:
     env.NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK || undefined,
   NEXT_PUBLIC_GOLDSKY_ENDPOINT: env.NEXT_PUBLIC_GOLDSKY_ENDPOINT || undefined,

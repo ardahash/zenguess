@@ -189,6 +189,14 @@ export default function DocsPage() {
               url: "https://horizen.hub.caldera.xyz/",
             },
             {
+              label: "Stargate Finance",
+              url: "https://stargate.finance/transfer",
+            },
+            {
+              label: "LayerZero Scan",
+              url: "https://layerzeroscan.com/",
+            },
+            {
               label: "Testnet Faucet",
               url: "https://horizen-testnet.hub.caldera.xyz/",
             },

@@ -6,6 +6,7 @@ const serverSchema = z.object({
     .trim()
     .optional()
     .or(z.literal("")),
+  LAYERZERO_API_KEY: z.string().trim().optional().or(z.literal("")),
 })
 
 function formatValidationError(
@@ -24,6 +25,7 @@ if (typeof window !== "undefined") {
 
 const parsedServerEnv = serverSchema.safeParse({
   DEPLOYER_PRIVATE_KEY: process.env.DEPLOYER_PRIVATE_KEY,
+  LAYERZERO_API_KEY: process.env.LAYERZERO_API_KEY,
 })
 
 if (!parsedServerEnv.success) {
@@ -34,6 +36,7 @@ const env = parsedServerEnv.data
 
 export const serverEnv = {
   DEPLOYER_PRIVATE_KEY: env.DEPLOYER_PRIVATE_KEY || undefined,
+  LAYERZERO_API_KEY: env.LAYERZERO_API_KEY || undefined,
 } as const
 
 export type ServerEnv = typeof serverEnv

@@ -8,6 +8,7 @@ import {
   type TradeEntity,
 } from "@/services/markets/market.types"
 import { clientEnv } from "@/lib/env/client"
+import { horizenMainnet, horizenTestnet } from "@/lib/chains"
 import { getOnchainPublicClient } from "@/lib/onchain/client"
 import {
   getContractBundle,
@@ -183,8 +184,15 @@ async function getCollateralDecimals(): Promise<number> {
   return Number(decimals)
 }
 
-function getFromBlock(): bigint {
-  const raw = clientEnv.NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK?.trim()
+function getFromBlock(chainId: number): bigint {
+  const raw =
+    (chainId === horizenMainnet.id
+      ? clientEnv.NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_MAINNET
+      : chainId === horizenTestnet.id
+        ? clientEnv.NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_TESTNET
+        : undefined) ??
+    clientEnv.NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK
+
   if (raw && /^\d+$/.test(raw)) {
     return BigInt(raw)
   }
@@ -193,13 +201,14 @@ function getFromBlock(): bigint {
 
 async function fetchTradeLogs(args?: { marketId?: bigint; trader?: Address }) {
   const client = getOnchainPublicClient()
-  const contracts = getContractBundle()
+  const chainId = client.chain?.id ?? horizenMainnet.id
+  const contracts = getContractBundle(chainId)
 
   return client.getContractEvents({
     address: contracts.marketManager,
     abi: zenGuessMarketManagerAbi,
     eventName: "TradeExecuted",
-    fromBlock: getFromBlock(),
+    fromBlock: getFromBlock(chainId),
     toBlock: "latest",
     args: {
       marketId: args?.marketId,
@@ -210,24 +219,26 @@ async function fetchTradeLogs(args?: { marketId?: bigint; trader?: Address }) {
 
 async function fetchMarketCreatedLogs() {
   const client = getOnchainPublicClient()
-  const contracts = getContractBundle()
+  const chainId = client.chain?.id ?? horizenMainnet.id
+  const contracts = getContractBundle(chainId)
   return client.getContractEvents({
     address: contracts.marketManager,
     abi: zenGuessMarketManagerAbi,
     eventName: "MarketCreated",
-    fromBlock: getFromBlock(),
+    fromBlock: getFromBlock(chainId),
     toBlock: "latest",
   })
 }
 
 async function fetchMarketResolvedLogs() {
   const client = getOnchainPublicClient()
-  const contracts = getContractBundle()
+  const chainId = client.chain?.id ?? horizenMainnet.id
+  const contracts = getContractBundle(chainId)
   return client.getContractEvents({
     address: contracts.marketManager,
     abi: zenGuessMarketManagerAbi,
     eventName: "MarketResolved",
-    fromBlock: getFromBlock(),
+    fromBlock: getFromBlock(chainId),
     toBlock: "latest",
   })
 }

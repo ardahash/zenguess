@@ -11,7 +11,12 @@ import type {
   SubmitTradeOutput,
 } from "@/lib/gateways/market-gateway"
 import type { CreateMarketInput } from "@/services/markets"
-import { erc20Abi, getContractBundle, zenGuessMarketManagerAbi } from "./contracts"
+import {
+  erc20Abi,
+  getContractBundle,
+  wethAbi,
+  zenGuessMarketManagerAbi,
+} from "./contracts"
 import {
   SHARE_DECIMALS,
   applySlippageFloor,
@@ -97,6 +102,69 @@ async function ensureAllowance(
   await context.publicClient.waitForTransactionReceipt({ hash: approvalHash })
 }
 
+function formatAmountForMessage(value: bigint, decimals: number): string {
+  return Number(formatUnits(value, decimals)).toFixed(6)
+}
+
+async function ensureCollateralBalance(
+  context: OnchainContext,
+  owner: Address,
+  requiredAmount: bigint,
+  collateralDecimals: number
+): Promise<void> {
+  const chainId = await getChainId(context.walletClient)
+  const contracts = getContractBundle(chainId)
+  const collateralBalance = (await context.publicClient.readContract({
+    address: contracts.collateralToken,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: [owner],
+  })) as bigint
+
+  if (collateralBalance >= requiredAmount) {
+    return
+  }
+
+  const symbol = (await context.publicClient.readContract({
+    address: contracts.collateralToken,
+    abi: erc20Abi,
+    functionName: "symbol",
+  })) as string
+  const missingAmount = requiredAmount - collateralBalance
+
+  if (symbol.toUpperCase() !== "WETH") {
+    throw new Error(
+      `Insufficient ${symbol} balance. Need ${formatAmountForMessage(
+        missingAmount,
+        collateralDecimals
+      )} more ${symbol}.`
+    )
+  }
+
+  const nativeBalance = await context.publicClient.getBalance({ address: owner })
+  if (nativeBalance < missingAmount) {
+    throw new Error(
+      `Insufficient ETH balance to wrap into WETH. Need at least ${formatAmountForMessage(
+        missingAmount,
+        18
+      )} ETH plus gas.`
+    )
+  }
+
+  const depositSimulation = await context.publicClient.simulateContract({
+    account: owner,
+    address: contracts.collateralToken,
+    abi: wethAbi,
+    functionName: "deposit",
+    args: [],
+    value: missingAmount,
+  })
+  const depositHash = await context.walletClient.writeContract(
+    depositSimulation.request
+  )
+  await context.publicClient.waitForTransactionReceipt({ hash: depositHash })
+}
+
 export async function createMarketWithWallet(
   context: OnchainContext,
   input: CreateMarketInput
@@ -112,6 +180,12 @@ export async function createMarketWithWallet(
     "Initial liquidity"
   )
 
+  await ensureCollateralBalance(
+    context,
+    account,
+    initialLiquidity,
+    collateralDecimals
+  )
   await ensureAllowance(context, account, initialLiquidity)
 
   const simulation = await context.publicClient.simulateContract({
@@ -175,6 +249,12 @@ export async function submitTradeWithWallet(
     : parseTokenAmount(input.amount, SHARE_DECIMALS, "Shares amount")
 
   if (isBuy) {
+    await ensureCollateralBalance(
+      context,
+      account,
+      inputAmount,
+      collateralDecimals
+    )
     await ensureAllowance(context, account, inputAmount)
   }
 

@@ -49,6 +49,7 @@ The app fails fast on invalid/missing env values.
 Contract deployment requires:
 
 - `DEPLOYER_PRIVATE_KEY`
+- `LAYERZERO_API_KEY` (for `/onramp` quote API)
 - `HORIZEN_TESTNET_RPC_HTTP` and/or `HORIZEN_MAINNET_RPC_HTTP`
 - optionally `COLLATERAL_TOKEN_ADDRESS`, `RESOLVER_ADDRESS`, `DEPLOY_OWNER_ADDRESS`, `TRADING_FEE_BPS`
 
@@ -78,21 +79,23 @@ Contract deployment requires:
   - `GET /api/portfolio?address=`
   - `POST /api/trades/simulate`
   - `POST /api/trades` (mock mode only)
+  - `GET /api/onramp/quote`
+  - `POST /api/onramp/quote`
 
 Gateway mode is controlled by `NEXT_PUBLIC_GATEWAY_MODE` (`onchain` or `mock`).
+Current default is `onchain` with WETH collateral manager deployment.
 
 ## Contract Status
 
 The repo now contains a production-grade draft contract implementation and deploy/test pipeline.
 
 - Contracts are drafted and tested locally.
-- Testnet deployment executed on March 1, 2026:
-  - `MockCollateral`: `0x6B518E35d352EDbdB68839445839f5a254eDBa71`
-  - `ZenGuessMarketManager`: `0xFe89369Fc2A2013D65dfe4C6Cf953b15e5175B59`
-  - Deployment record: [deployments/horizenTestnet.json](/c:/Users/Arda/othergithubstuff/zenguess/deployments/horizenTestnet.json)
-- Mainnet deployment executed on March 1, 2026:
-  - `Bridged USDC (Stargate) (USDC.e)`: `0xDF7108f8B10F9b9eC1aba01CCa057268cbf86B6c`
-  - `ZenGuessMarketManager`: `0x8AbEdc4f49EeffC225948784E474d2280bF55E94`
+- Mainnet WETH deployment executed on March 2, 2026:
+  - `WETH`: `0x4200000000000000000000000000000000000006`
+  - `ZenGuessMarketManager`: `0xE3dB30ff10E851aA1f3e50Ed212281CB5e98a9E8`
   - Deployment record: [deployments/horizenMainnet.json](/c:/Users/Arda/othergithubstuff/zenguess/deployments/horizenMainnet.json)
+- Testnet WETH deployment executed on March 2, 2026:
+  - `WETH`: `0x4200000000000000000000000000000000000006`
+  - `ZenGuessMarketManager`: `0xba7147BCE0e12414e7612Ab72D386FeBAdB3322D`
+  - Deployment record: [deployments/horizenTestnet.json](/c:/Users/Arda/othergithubstuff/zenguess/deployments/horizenTestnet.json)
 - Frontend defaults to on-chain mode (`NEXT_PUBLIC_GATEWAY_MODE=onchain`).
-- Keep `NEXT_PUBLIC_GATEWAY_MODE=mock` for local demo-only flows and CI smoke tests.

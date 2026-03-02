@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { defaultChain } from "@/lib/chains"
+import { clientEnv } from "@/lib/env/client"
 import { formatUSD } from "@/lib/format"
 import {
   claimWinningsOnchain,
@@ -22,6 +23,7 @@ import { isWrongNetwork } from "@/lib/web3"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import type { Market } from "@/data/types"
+import { toUserFacingWeb3Error } from "@/lib/web3-errors"
 
 const MIN_TRADE_AMOUNT = 1
 const MIN_SELL_SHARES_AMOUNT = 0.01
@@ -30,6 +32,7 @@ const LARGE_TRADE_CONFIRM_THRESHOLD = 5_000
 const LARGE_SELL_SHARES_CONFIRM_THRESHOLD = 10_000
 const MIN_SLIPPAGE = 0.1
 const MAX_SLIPPAGE = 5
+const BETTING_TOKEN_SYMBOL = clientEnv.NEXT_PUBLIC_BETTING_TOKEN_SYMBOL
 
 interface TradePanelProps {
   market: Market
@@ -241,10 +244,10 @@ export function TradePanel({ market }: TradePanelProps) {
         setEstimate(null)
       }
     } catch (submitError) {
-      const message =
-        submitError instanceof Error
-          ? submitError.message
-          : "Transaction failed. Please try again."
+      const message = toUserFacingWeb3Error(
+        submitError,
+        "Transaction failed. Please try again."
+      )
       setFormError(message)
       toast.error(message)
     } finally {
@@ -272,10 +275,10 @@ export function TradePanel({ market }: TradePanelProps) {
         description: `Received ${formatUSD(result.amount)}.`,
       })
     } catch (claimError) {
-      const message =
-        claimError instanceof Error
-          ? claimError.message
-          : "Failed to claim winnings."
+      const message = toUserFacingWeb3Error(
+        claimError,
+        "Failed to claim winnings."
+      )
       toast.error(message)
     }
   }
@@ -378,9 +381,9 @@ export function TradePanel({ market }: TradePanelProps) {
           <Label htmlFor="amount" className="text-xs">
             {onchainMode
               ? side === "buy"
-                ? "Amount (USDC.e)"
+                ? `Amount (${BETTING_TOKEN_SYMBOL})`
                 : "Shares"
-              : "Amount (USD)"}
+              : `Amount (${BETTING_TOKEN_SYMBOL})`}
           </Label>
           <Input
             id="amount"
@@ -400,20 +403,22 @@ export function TradePanel({ market }: TradePanelProps) {
             <p className="text-xs text-muted-foreground">
               {onchainMode && side === "sell"
                 ? `Min ${MIN_SELL_SHARES_AMOUNT} shares, max ${MAX_TRADE_AMOUNT.toLocaleString()} shares.`
-                : `Min $${MIN_TRADE_AMOUNT}, max $${MAX_TRADE_AMOUNT.toLocaleString()}.`}
+                : `Min ${MIN_TRADE_AMOUNT} ${BETTING_TOKEN_SYMBOL}, max ${MAX_TRADE_AMOUNT.toLocaleString()} ${BETTING_TOKEN_SYMBOL}.`}
             </p>
           )}
           <div className="flex gap-1">
             {(onchainMode && side === "sell"
               ? [1, 5, 10, 25]
-              : [10, 25, 50, 100]
+              : [0.01, 0.05, 0.1, 0.25]
             ).map((preset) => (
               <button
                 key={preset}
                 onClick={() => handleAmountChange(String(preset))}
                 className="rounded border border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
-                {onchainMode && side === "sell" ? `${preset} sh` : `$${preset}`}
+                {onchainMode && side === "sell"
+                  ? `${preset} sh`
+                  : `${preset} ${BETTING_TOKEN_SYMBOL}`}
               </button>
             ))}
           </div>
@@ -495,7 +500,7 @@ export function TradePanel({ market }: TradePanelProps) {
         <p className="text-center text-[10px] text-muted-foreground">
           {onchainMode
             ? "Trades execute directly against ZenGuessMarketManager on Horizen."
-            : "Trades are simulated via mock gateway until contracts are deployed."}
+            : `${BETTING_TOKEN_SYMBOL} mode is simulated until the ETH-collateral contract deployment is complete.`}
         </p>
       </CardContent>
     </Card>

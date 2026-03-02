@@ -27,6 +27,7 @@ const navItems = [
   { href: "/markets", label: "Markets", icon: LayoutGrid },
   { href: "/portfolio", label: "Portfolio", icon: Briefcase },
   { href: "/activity", label: "Activity", icon: Activity },
+  // { href: "/onramp", label: "Onramp", icon: ArrowLeftRight },
   { href: "/create", label: "Create", icon: PlusCircle },
   { href: "/docs", label: "Docs", icon: BookOpen },
   { href: "/settings", label: "Settings", icon: Settings },

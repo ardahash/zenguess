@@ -35,6 +35,9 @@ import {
 } from "@/lib/contracts"
 import { defaultChain } from "@/lib/chains"
 import { isWrongNetwork } from "@/lib/web3"
+import { toUserFacingWeb3Error } from "@/lib/web3-errors"
+
+const BETTING_TOKEN_SYMBOL = clientEnv.NEXT_PUBLIC_BETTING_TOKEN_SYMBOL
 
 const steps = [
   "Question",
@@ -267,11 +270,7 @@ export default function CreateMarketPage() {
       }
       router.push(`/markets/${result.data.id}`)
     } catch (createError) {
-      toast.error(
-        createError instanceof Error
-          ? createError.message
-          : "Failed to create market. Please try again."
-      )
+      toast.error(toUserFacingWeb3Error(createError, "Failed to create market. Please try again."))
     } finally {
       setIsSubmitting(false)
     }
@@ -486,7 +485,9 @@ export default function CreateMarketPage() {
           {/* Step 4: Liquidity */}
           {step === 4 && (
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="liquidity">Initial Liquidity (USD)</Label>
+              <Label htmlFor="liquidity">
+                Initial Liquidity ({BETTING_TOKEN_SYMBOL})
+              </Label>
               <Input
                 id="liquidity"
                 type="number"
@@ -555,7 +556,9 @@ export default function CreateMarketPage() {
                 <span className="text-muted-foreground">
                   Initial Liquidity
                 </span>
-                <span className="font-medium">${liquidity}</span>
+                <span className="font-medium">
+                  {liquidity} {BETTING_TOKEN_SYMBOL}
+                </span>
               </div>
             </div>
           )}

@@ -16,6 +16,7 @@ import type {
   PortfolioPositionEntity,
   TradeEntity,
 } from "./market.types"
+import { clientEnv } from "@/lib/env/client"
 
 interface MockStore {
   markets: MarketEntity[]
@@ -29,9 +30,14 @@ type GlobalStore = typeof globalThis & {
 }
 
 const enableDemoData = process.env.NEXT_PUBLIC_ENABLE_DEMO_DATA === "true"
-const mockStorePath = path.join(process.cwd(), "cache", "market-store.json")
 const isNodeRuntime = typeof process !== "undefined" && Boolean(process.versions?.node)
+const isServerlessRuntime =
+  process.env.VERCEL === "1" || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
+const mockStorePath = isServerlessRuntime
+  ? path.join("/tmp", "zenguess-cache", "market-store.json")
+  : path.join(process.cwd(), "cache", "market-store.json")
 const shouldPersistStore = isNodeRuntime && !enableDemoData
+const bettingTokenSymbol = clientEnv.NEXT_PUBLIC_BETTING_TOKEN_SYMBOL
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
@@ -118,17 +124,22 @@ function writeStoreToDisk(store: MockStore): void {
     return
   }
 
-  const storeDirectory = path.dirname(mockStorePath)
-  const tempStorePath = `${mockStorePath}.${process.pid}.${Date.now()}.tmp`
-  fs.mkdirSync(storeDirectory, { recursive: true })
-  fs.writeFileSync(tempStorePath, JSON.stringify(store), "utf8")
   try {
-    fs.renameSync(tempStorePath, mockStorePath)
-  } catch {
-    if (fs.existsSync(mockStorePath)) {
-      fs.unlinkSync(mockStorePath)
+    const storeDirectory = path.dirname(mockStorePath)
+    const tempStorePath = `${mockStorePath}.${process.pid}.${Date.now()}.tmp`
+    fs.mkdirSync(storeDirectory, { recursive: true })
+    fs.writeFileSync(tempStorePath, JSON.stringify(store), "utf8")
+
+    try {
+      fs.renameSync(tempStorePath, mockStorePath)
+    } catch {
+      if (fs.existsSync(mockStorePath)) {
+        fs.unlinkSync(mockStorePath)
+      }
+      fs.renameSync(tempStorePath, mockStorePath)
     }
-    fs.renameSync(tempStorePath, mockStorePath)
+  } catch {
+    // Ignore persistence failures on read-only/ephemeral runtimes.
   }
 }
 
@@ -257,7 +268,7 @@ class InMemoryMarketRepository {
       type: "market_created",
       marketId: market.id,
       marketTitle: market.question,
-      description: `New market created with $${market.liquidity.toLocaleString()} initial liquidity`,
+      description: `New market created with ${market.liquidity.toLocaleString()} ${bettingTokenSymbol} initial liquidity`,
       actor: market.creatorAddress,
       timestamp: now,
       txHash: `0x${randomUuid().replaceAll("-", "")}${randomUuid().replaceAll(
@@ -285,7 +296,7 @@ class InMemoryMarketRepository {
       marketTitle: market?.question ?? trade.marketId,
       description: `${trade.side.toUpperCase()} ${trade.shares.toFixed(
         2
-      )} ${trade.outcomeLabel} shares at $${trade.price.toFixed(2)}`,
+      )} ${trade.outcomeLabel} shares at ${trade.price.toFixed(2)} ${bettingTokenSymbol}`,
       actor: trade.traderAddress,
       timestamp: trade.timestamp,
       txHash: trade.txHash,
