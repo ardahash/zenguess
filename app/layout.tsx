@@ -12,7 +12,26 @@ const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 void serverEnv
 
+function resolveMetadataBase(): URL | undefined {
+  const rawBaseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ??
+    process.env.VERCEL_URL ??
+    "http://localhost:3000"
+
+  const normalizedBaseUrl = rawBaseUrl.startsWith("http")
+    ? rawBaseUrl
+    : `https://${rawBaseUrl}`
+
+  try {
+    return new URL(normalizedBaseUrl)
+  } catch {
+    return undefined
+  }
+}
+
 export const metadata: Metadata = {
+  metadataBase: resolveMetadataBase(),
   title: {
     default: "ZenGuess - Prediction Markets on Horizen",
     template: "%s | ZenGuess",
@@ -21,12 +40,30 @@ export const metadata: Metadata = {
     "Trade on the future. Decentralized prediction markets powered by Horizen L3.",
   generator: "v0.app",
   icons: {
-    icon: [
-      { url: "/icon-light-32x32.png", media: "(prefers-color-scheme: light)" },
-      { url: "/icon-dark-32x32.png", media: "(prefers-color-scheme: dark)" },
-      { url: "/icon.svg", type: "image/svg+xml" },
+    icon: [{ url: "/logo.jpg", type: "image/jpeg" }],
+    shortcut: "/logo.jpg",
+    apple: "/logo.jpg",
+  },
+  openGraph: {
+    title: "ZenGuess - Prediction Markets on Horizen",
+    description:
+      "Trade on the future. Decentralized prediction markets powered by Horizen L3.",
+    type: "website",
+    images: [
+      {
+        url: "/logo.jpg",
+        width: 1200,
+        height: 1200,
+        alt: "ZenGuess logo",
+      },
     ],
-    apple: "/apple-icon.png",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ZenGuess - Prediction Markets on Horizen",
+    description:
+      "Trade on the future. Decentralized prediction markets powered by Horizen L3.",
+    images: ["/logo.jpg"],
   },
 }
 

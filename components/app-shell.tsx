@@ -1,9 +1,9 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  BarChart3,
   Home,
   LayoutGrid,
   PlusCircle,
@@ -44,7 +44,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="mx-auto flex h-14 max-w-7xl items-center px-4">
           {/* Logo */}
           <Link href="/" className="mr-6 flex items-center gap-2">
-            <BarChart3 className="size-6 text-primary" />
+            <Image
+              src="/logo.jpg"
+              alt="ZenGuess logo"
+              width={28}
+              height={28}
+              className="size-7 rounded-md object-cover"
+              priority
+            />
             <span className="text-lg font-bold tracking-tight">
               ZenGuess
             </span>
@@ -140,7 +147,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <footer className="border-t border-border bg-background">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-6 text-sm text-muted-foreground sm:flex-row">
           <div className="flex items-center gap-2">
-            <BarChart3 className="size-4 text-primary" />
+            <Image
+              src="/logo.jpg"
+              alt="ZenGuess logo"
+              width={16}
+              height={16}
+              className="size-4 rounded object-cover"
+            />
             <span>ZenGuess</span>
           </div>
           <p className="text-center text-xs">
