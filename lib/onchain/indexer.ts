@@ -8,6 +8,7 @@ import {
   type TradeEntity,
 } from "@/services/markets/market.types"
 import { clientEnv } from "@/lib/env/client"
+import { formatCollateralAmount } from "@/lib/collateral-format"
 import { horizenMainnet, horizenTestnet } from "@/lib/chains"
 import { getOnchainPublicClient } from "@/lib/onchain/client"
 import {
@@ -635,7 +636,7 @@ export async function fetchOnchainActivity(
         type: "trade",
         marketId,
         marketTitle: market?.question ?? `Market ${marketId}`,
-        description: `${side.toUpperCase()} ${shares.toFixed(2)} shares for $${total.toFixed(2)}`,
+        description: `${side.toUpperCase()} ${shares.toFixed(2)} shares for ${formatCollateralAmount(total)}`,
         actor: (log.args.trader ?? ZERO_ADDRESS) as Address,
         timestamp,
         txHash,
@@ -659,9 +660,7 @@ export async function fetchOnchainActivity(
         type: "market_created",
         marketId,
         marketTitle: market?.question ?? `Market ${marketId}`,
-        description: `Market opened with $${initialLiquidity.toFixed(
-          2
-        )} initial liquidity`,
+        description: `Market opened with ${formatCollateralAmount(initialLiquidity)} initial liquidity`,
         actor: (log.args.creator ?? ZERO_ADDRESS) as Address,
         timestamp,
         txHash,

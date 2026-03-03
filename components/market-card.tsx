@@ -2,7 +2,8 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import type { Market } from "@/data/types"
-import { formatCompactNumber, formatTimeRemaining } from "@/lib/format"
+import { formatCollateralCompact } from "@/lib/collateral-format"
+import { formatTimeRemaining } from "@/lib/format"
 import { Clock, TrendingUp, Droplets } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -85,11 +86,11 @@ export function MarketCard({ market }: { market: Market }) {
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <TrendingUp className="size-3" />
-              ${formatCompactNumber(market.volume)} vol
+              {formatCollateralCompact(market.volume)} vol
             </span>
             <span className="flex items-center gap-1">
               <Droplets className="size-3" />
-              ${formatCompactNumber(market.liquidity)} liq
+              {formatCollateralCompact(market.liquidity)} liq
             </span>
           </div>
         </CardContent>

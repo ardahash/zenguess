@@ -21,11 +21,14 @@ import { OddsChart } from "@/components/odds-chart"
 import { TradePanel } from "@/components/trade-panel"
 import type { Market, Trade } from "@/data/types"
 import {
+  COLLATERAL_SYMBOL,
+  formatCollateralAmount,
+} from "@/lib/collateral-format"
+import {
   formatAddress,
   formatDate,
   formatDatetime,
   formatTimeRemaining,
-  formatUSD,
 } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
@@ -166,12 +169,16 @@ export default function MarketDetailPage() {
             <div className="flex items-center gap-1.5 text-sm">
               <TrendingUp className="size-4 text-muted-foreground" />
               <span className="text-muted-foreground">Volume:</span>
-              <span className="font-medium">{formatUSD(market.volume)}</span>
+              <span className="font-medium">
+                {formatCollateralAmount(market.volume)}
+              </span>
             </div>
             <div className="flex items-center gap-1.5 text-sm">
               <Droplets className="size-4 text-muted-foreground" />
               <span className="text-muted-foreground">Liquidity:</span>
-              <span className="font-medium">{formatUSD(market.liquidity)}</span>
+              <span className="font-medium">
+                {formatCollateralAmount(market.liquidity)}
+              </span>
             </div>
             <div className="flex items-center gap-1.5 text-sm">
               <Clock className="size-4 text-muted-foreground" />
@@ -228,8 +235,12 @@ export default function MarketDetailPage() {
                         <TableHead>Side</TableHead>
                         <TableHead>Outcome</TableHead>
                         <TableHead className="text-right">Shares</TableHead>
-                        <TableHead className="text-right">Price</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
+                        <TableHead className="text-right">
+                          Price ({COLLATERAL_SYMBOL})
+                        </TableHead>
+                        <TableHead className="text-right">
+                          Total ({COLLATERAL_SYMBOL})
+                        </TableHead>
                         <TableHead>Time</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -259,10 +270,10 @@ export default function MarketDetailPage() {
                             {trade.shares.toLocaleString()}
                           </TableCell>
                           <TableCell className="text-right text-xs">
-                            {formatUSD(trade.price)}
+                            {formatCollateralAmount(trade.price)}
                           </TableCell>
                           <TableCell className="text-right text-xs">
-                            {formatUSD(trade.total)}
+                            {formatCollateralAmount(trade.total)}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
                             {formatDatetime(trade.timestamp)}

@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { MarketCard } from "@/components/market-card"
 import { clientEnv } from "@/lib/env/client"
+import { COLLATERAL_SYMBOL, formatCollateralAmount } from "@/lib/collateral-format"
 import { marketRepository } from "@/services/markets"
-import { formatCompactNumber, formatUSD } from "@/lib/format"
+import { formatCompactNumber } from "@/lib/format"
 import { fetchOnchainActivity, fetchOnchainMarkets } from "@/lib/onchain/indexer"
 
 export const dynamic = "force-dynamic"
@@ -48,7 +49,10 @@ export default async function HomePage() {
     activity.map((event) => event.actor.toLowerCase())
   ).size
   const stats = [
-    { label: "Total Volume", value: formatUSD(totalVolume) },
+    {
+      label: `Total Volume (${COLLATERAL_SYMBOL})`,
+      value: formatCollateralAmount(totalVolume),
+    },
     { label: "Active Markets", value: String(allMarkets.length) },
     {
       label: "Total Trades",
