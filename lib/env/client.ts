@@ -14,6 +14,7 @@ const clientSchema = z.object({
   NEXT_PUBLIC_ENABLE_DEMO_DATA: z.enum(["true", "false"]).default("false"),
   NEXT_PUBLIC_GATEWAY_MODE: z.enum(["mock", "onchain"]).default("onchain"),
   NEXT_PUBLIC_BETTING_TOKEN_SYMBOL: z.string().trim().min(1).max(16).default("ETH"),
+  NEXT_PUBLIC_ETH_USD_REFERENCE: z.coerce.number().positive().default(3000),
   NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_MAINNET: z
     .string()
     .regex(/^\d+$/)
@@ -95,6 +96,9 @@ const parsedClientEnv = clientSchema.safeParse({
   NEXT_PUBLIC_BETTING_TOKEN_SYMBOL: optionalEnv(
     process.env.NEXT_PUBLIC_BETTING_TOKEN_SYMBOL
   ),
+  NEXT_PUBLIC_ETH_USD_REFERENCE: optionalEnv(
+    process.env.NEXT_PUBLIC_ETH_USD_REFERENCE
+  ),
   NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_MAINNET: optionalEnv(
     process.env.NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_MAINNET
   ),
@@ -122,6 +126,7 @@ export const clientEnv = {
   NEXT_PUBLIC_ENABLE_MOCK_WALLET: env.NEXT_PUBLIC_ENABLE_MOCK_WALLET === "true",
   NEXT_PUBLIC_ENABLE_DEMO_DATA: env.NEXT_PUBLIC_ENABLE_DEMO_DATA === "true",
   NEXT_PUBLIC_BETTING_TOKEN_SYMBOL: env.NEXT_PUBLIC_BETTING_TOKEN_SYMBOL,
+  NEXT_PUBLIC_ETH_USD_REFERENCE: env.NEXT_PUBLIC_ETH_USD_REFERENCE,
   NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_MAINNET:
     env.NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_MAINNET || undefined,
   NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_TESTNET:

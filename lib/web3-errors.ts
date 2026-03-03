@@ -16,7 +16,7 @@ export function toUserFacingWeb3Error(
   }
 
   if (message.includes("insufficient allowance")) {
-    return "USDC.e allowance is too low. Approve token spending and retry."
+    return "Collateral token allowance is too low. Approve token spending and retry."
   }
 
   if (message.includes("insufficient funds")) {

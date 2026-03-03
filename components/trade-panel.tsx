@@ -28,11 +28,19 @@ import { toUserFacingWeb3Error } from "@/lib/web3-errors"
 const MIN_TRADE_AMOUNT = 1
 const MIN_SELL_SHARES_AMOUNT = 0.01
 const MAX_TRADE_AMOUNT = 1_000_000
-const LARGE_TRADE_CONFIRM_THRESHOLD = 5_000
+const MIN_BUY_USD = 1
+const MIN_BUY_ETH_FLOOR = 0.000001
+const ETH_BUY_INPUT_STEP = 0.0001
+const LARGE_TRADE_CONFIRM_THRESHOLD_USD = 5_000
 const LARGE_SELL_SHARES_CONFIRM_THRESHOLD = 10_000
 const MIN_SLIPPAGE = 0.1
 const MAX_SLIPPAGE = 5
 const BETTING_TOKEN_SYMBOL = clientEnv.NEXT_PUBLIC_BETTING_TOKEN_SYMBOL
+const ETH_USD_REFERENCE = clientEnv.NEXT_PUBLIC_ETH_USD_REFERENCE
+const TOKEN_AMOUNT_FORMATTER = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 6,
+})
 
 interface TradePanelProps {
   market: Market
@@ -60,8 +68,36 @@ export function TradePanel({ market }: TradePanelProps) {
   const noProb = market.outcomes[1]?.probability ?? 0.5
   const isResolved = market.status === "resolved"
   const onchainMode = isOnchainGatewayEnabled()
+  const isEthCollateral = BETTING_TOKEN_SYMBOL.toUpperCase() === "ETH"
   const wrongNetwork = isConnected && isWrongNetwork(chainId)
   const parsedAmount = Number(amount)
+
+  function getMinTradeAmount(currentSide: "buy" | "sell"): number {
+    if (onchainMode && currentSide === "sell") {
+      return MIN_SELL_SHARES_AMOUNT
+    }
+
+    if (onchainMode && currentSide === "buy" && isEthCollateral) {
+      return Math.max(MIN_BUY_USD / ETH_USD_REFERENCE, MIN_BUY_ETH_FLOOR)
+    }
+
+    return MIN_TRADE_AMOUNT
+  }
+
+  const minTradeAmount = getMinTradeAmount(side)
+
+  function formatTokenAmount(amountValue: number): string {
+    return TOKEN_AMOUNT_FORMATTER.format(amountValue)
+  }
+
+  function formatCollateralAmount(amountValue: number): string {
+    const tokenAmount = `${formatTokenAmount(amountValue)} ${BETTING_TOKEN_SYMBOL}`
+    if (!onchainMode || !isEthCollateral) {
+      return tokenAmount
+    }
+
+    return `${tokenAmount} (${formatUSD(amountValue * ETH_USD_REFERENCE)})`
+  }
 
   const canSubmit = useMemo(() => {
     if (!isConnected || wrongNetwork || isResolved || isSubmitting) {
@@ -86,15 +122,16 @@ export function TradePanel({ market }: TradePanelProps) {
       return "Enter a valid amount."
     }
 
-    const minAmount =
-      onchainMode && side === "sell"
-        ? MIN_SELL_SHARES_AMOUNT
-        : MIN_TRADE_AMOUNT
+    const minAmount = getMinTradeAmount(side)
     if (nextAmount < minAmount) {
       if (onchainMode && side === "sell") {
         return `Shares must be at least ${MIN_SELL_SHARES_AMOUNT}.`
       }
-      return `Amount must be at least $${MIN_TRADE_AMOUNT}.`
+      if (onchainMode && side === "buy" && isEthCollateral) {
+        return `Amount must be at least ${formatTokenAmount(minAmount)} ETH (${formatUSD(MIN_BUY_USD)} minimum reference).`
+      }
+
+      return `Amount must be at least ${formatTokenAmount(minAmount)} ${BETTING_TOKEN_SYMBOL}.`
     }
 
     if (nextAmount > MAX_TRADE_AMOUNT) {
@@ -185,9 +222,15 @@ export function TradePanel({ market }: TradePanelProps) {
       return
     }
 
-    if (side === "buy" && nextAmount >= LARGE_TRADE_CONFIRM_THRESHOLD) {
+    const tradeNotionalUsd =
+      onchainMode && isEthCollateral
+        ? nextAmount * ETH_USD_REFERENCE
+        : nextAmount
+    if (side === "buy" && tradeNotionalUsd >= LARGE_TRADE_CONFIRM_THRESHOLD_USD) {
       const confirmed = window.confirm(
-        `This trade is large ($${nextAmount.toLocaleString()}). Are you sure you want to continue?`
+        onchainMode && isEthCollateral
+          ? `This trade is large (${formatTokenAmount(nextAmount)} ETH, about ${formatUSD(tradeNotionalUsd)}). Are you sure you want to continue?`
+          : `This trade is large ($${nextAmount.toLocaleString()}). Are you sure you want to continue?`
       )
       if (!confirmed) {
         return
@@ -272,7 +315,7 @@ export function TradePanel({ market }: TradePanelProps) {
         { marketId: market.id }
       )
       toast.success("Winnings claimed successfully", {
-        description: `Received ${formatUSD(result.amount)}.`,
+        description: `Received ${formatCollateralAmount(result.amount)}.`,
       })
     } catch (claimError) {
       const message = toUserFacingWeb3Error(
@@ -388,9 +431,15 @@ export function TradePanel({ market }: TradePanelProps) {
           <Input
             id="amount"
             type="number"
-            min={onchainMode && side === "sell" ? MIN_SELL_SHARES_AMOUNT : MIN_TRADE_AMOUNT}
+            min={minTradeAmount}
             max={MAX_TRADE_AMOUNT}
-            step={onchainMode && side === "sell" ? "0.01" : "1"}
+            step={
+              onchainMode && side === "sell"
+                ? "0.01"
+                : onchainMode && side === "buy" && isEthCollateral
+                  ? String(ETH_BUY_INPUT_STEP)
+                  : "1"
+            }
             placeholder="0.00"
             value={amount}
             onChange={(event) => handleAmountChange(event.target.value)}
@@ -403,13 +452,17 @@ export function TradePanel({ market }: TradePanelProps) {
             <p className="text-xs text-muted-foreground">
               {onchainMode && side === "sell"
                 ? `Min ${MIN_SELL_SHARES_AMOUNT} shares, max ${MAX_TRADE_AMOUNT.toLocaleString()} shares.`
-                : `Min ${MIN_TRADE_AMOUNT} ${BETTING_TOKEN_SYMBOL}, max ${MAX_TRADE_AMOUNT.toLocaleString()} ${BETTING_TOKEN_SYMBOL}.`}
+                : onchainMode && side === "buy" && isEthCollateral
+                  ? `Min ${formatTokenAmount(minTradeAmount)} ETH (${formatUSD(MIN_BUY_USD)} minimum reference), max ${MAX_TRADE_AMOUNT.toLocaleString()} ETH.`
+                  : `Min ${formatTokenAmount(minTradeAmount)} ${BETTING_TOKEN_SYMBOL}, max ${MAX_TRADE_AMOUNT.toLocaleString()} ${BETTING_TOKEN_SYMBOL}.`}
             </p>
           )}
           <div className="flex gap-1">
             {(onchainMode && side === "sell"
               ? [1, 5, 10, 25]
-              : [0.01, 0.05, 0.1, 0.25]
+              : onchainMode && side === "buy" && isEthCollateral
+                ? [0.001, 0.005, 0.01, 0.05]
+                : [0.01, 0.05, 0.1, 0.25]
             ).map((preset) => (
               <button
                 key={preset}
@@ -461,13 +514,17 @@ export function TradePanel({ market }: TradePanelProps) {
                 {side === "buy" ? "Est. cost" : "Est. proceeds"}
               </span>
               <span className="font-medium text-foreground">
-                {formatUSD(estimate.estimatedCost)}
+                {onchainMode
+                  ? formatCollateralAmount(estimate.estimatedCost)
+                  : formatUSD(estimate.estimatedCost)}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Fee</span>
               <span className="font-medium text-foreground">
-                {formatUSD(estimate.fee)}
+                {onchainMode
+                  ? formatCollateralAmount(estimate.fee)
+                  : formatUSD(estimate.fee)}
               </span>
             </div>
           </div>
