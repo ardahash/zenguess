@@ -26,6 +26,7 @@ export function MarketCard({ market }: { market: Market }) {
   return (
     <Link
       href={`/markets/${market.id}`}
+      prefetch={false}
       className="group block"
       data-testid={`market-card-${market.id}`}
     >

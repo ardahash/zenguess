@@ -43,7 +43,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-7xl items-center px-4">
           {/* Logo */}
-          <Link href="/" className="mr-6 flex items-center gap-2">
+          <Link href="/" prefetch={false} className="mr-6 flex items-center gap-2">
             <Image
               src="/logo.jpg"
               alt="ZenGuess logo"
@@ -67,6 +67,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={false}
                   className={cn(
                     "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                     isActive
@@ -114,6 +115,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={false}
                   onClick={() => setMobileMenuOpen(false)}
                   className={cn(
                     "flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
@@ -161,7 +163,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             responsibly.
           </p>
           <div className="flex gap-4">
-            <Link href="/docs" className="transition-colors hover:text-foreground">
+            <Link
+              href="/docs"
+              prefetch={false}
+              className="transition-colors hover:text-foreground"
+            >
               Docs
             </Link>
             <a

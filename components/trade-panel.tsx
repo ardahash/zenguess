@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useAccount, usePublicClient, useWalletClient } from "wagmi"
 import { ArrowDownRight, ArrowUpRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -44,9 +45,11 @@ const TOKEN_AMOUNT_FORMATTER = new Intl.NumberFormat("en-US", {
 
 interface TradePanelProps {
   market: Market
+  onTradeSuccess?: () => void
 }
 
-export function TradePanel({ market }: TradePanelProps) {
+export function TradePanel({ market, onTradeSuccess }: TradePanelProps) {
+  const router = useRouter()
   const { address, chainId, isConnected } = useAccount()
   const { data: walletClient } = useWalletClient()
   const publicClient = usePublicClient({ chainId: defaultChain.id })
@@ -285,6 +288,8 @@ export function TradePanel({ market }: TradePanelProps) {
         )
         setAmount("")
         setEstimate(null)
+        onTradeSuccess?.()
+        router.refresh()
       }
     } catch (submitError) {
       const message = toUserFacingWeb3Error(

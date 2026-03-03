@@ -52,7 +52,7 @@ export default function MarketsPage() {
     const controller = new AbortController()
     const timeout = setTimeout(async () => {
       try {
-        setIsLoading(true)
+        setIsLoading((current) => current || markets.length === 0)
         setError(null)
 
         const params = new URLSearchParams()
@@ -99,7 +99,25 @@ export default function MarketsPage() {
       controller.abort()
       clearTimeout(timeout)
     }
-  }, [category, reloadNonce, search, sort, status])
+  }, [category, markets.length, reloadNonce, search, sort, status])
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setReloadNonce((current) => current + 1)
+    }, 10_000)
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        setReloadNonce((current) => current + 1)
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    return () => {
+      window.clearInterval(interval)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
+  }, [])
 
   const hasFilters = useMemo(
     () => Boolean(search.trim() || category !== "all" || status !== "all"),

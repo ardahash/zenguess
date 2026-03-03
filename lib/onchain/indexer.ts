@@ -59,7 +59,7 @@ type CacheStore = {
   tradeVolumeStats?: CacheEntry<TradeVolumeStats>
 }
 
-const CACHE_TTL_MS = 8_000
+const CACHE_TTL_MS = 3_000
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 function getCacheStore(): CacheStore {

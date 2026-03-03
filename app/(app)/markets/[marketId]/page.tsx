@@ -46,6 +46,7 @@ export default function MarketDetailPage() {
   const [trades, setTrades] = useState<Trade[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [reloadNonce, setReloadNonce] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -94,7 +95,7 @@ export default function MarketDetailPage() {
       active = false
       controller.abort()
     }
-  }, [marketId])
+  }, [marketId, reloadNonce])
 
   if (isLoading) {
     return (
@@ -340,7 +341,10 @@ export default function MarketDetailPage() {
         </div>
 
         <div className="w-full shrink-0 lg:sticky lg:top-20 lg:w-[320px] lg:self-start">
-          <TradePanel market={market} />
+          <TradePanel
+            market={market}
+            onTradeSuccess={() => setReloadNonce((current) => current + 1)}
+          />
         </div>
       </div>
     </div>
