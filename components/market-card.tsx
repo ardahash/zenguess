@@ -17,11 +17,40 @@ const categoryColors: Record<string, string> = {
   other: "bg-muted text-muted-foreground",
 }
 
+const outcomeBarColors = [
+  "bg-success",
+  "bg-chart-2",
+  "bg-chart-3",
+  "bg-chart-4",
+  "bg-chart-5",
+  "bg-primary",
+  "bg-warning",
+  "bg-destructive",
+]
+
 export function MarketCard({ market }: { market: Market }) {
-  const yesOutcome = market.outcomes[0] ?? { label: "Yes", probability: 0.5 }
-  const noOutcome = market.outcomes[1] ?? { label: "No", probability: 0.5 }
-  const yesPercent = Math.round(yesOutcome.probability * 100)
-  const noPercent = Math.round(noOutcome.probability * 100)
+  const outcomes =
+    market.outcomes.length > 0
+      ? market.outcomes
+      : [{ label: "Outcome 1", probability: 1 }]
+  const rawProbabilities = outcomes.map((outcome) =>
+    Number.isFinite(outcome.probability)
+      ? Math.max(0, outcome.probability)
+      : 0
+  )
+  const totalProbability = rawProbabilities.reduce(
+    (total, value) => total + value,
+    0
+  )
+  const normalizedProbabilities =
+    totalProbability > 0
+      ? rawProbabilities.map((value) => (value / totalProbability) * 100)
+      : outcomes.map(() => 100 / outcomes.length)
+  const hasBinaryOutcomes = outcomes.length === 2
+  const primaryOutcome = outcomes[0] ?? { label: "Outcome 1", probability: 0.5 }
+  const secondaryOutcome = outcomes[1] ?? { label: "Outcome 2", probability: 0.5 }
+  const primaryPercent = Math.round(normalizedProbabilities[0] ?? 50)
+  const secondaryPercent = Math.round(normalizedProbabilities[1] ?? 50)
 
   return (
     <Link
@@ -61,26 +90,56 @@ export function MarketCard({ market }: { market: Market }) {
             {market.question}
           </h3>
 
-          {/* Odds bar */}
+          {/* Odds */}
           <div className="mb-3">
-            <div className="mb-1 flex items-center justify-between text-xs font-medium">
-              <span className="text-success">
-                {yesOutcome.label} {yesPercent}%
-              </span>
-              <span className="text-destructive">
-                {noOutcome.label} {noPercent}%
-              </span>
-            </div>
-            <div className="flex h-2 overflow-hidden rounded-full bg-muted">
-              <div
-                className="rounded-l-full bg-success transition-all"
-                style={{ width: `${yesPercent}%` }}
-              />
-              <div
-                className="rounded-r-full bg-destructive transition-all"
-                style={{ width: `${noPercent}%` }}
-              />
-            </div>
+            {hasBinaryOutcomes ? (
+              <>
+                <div className="mb-1 flex items-center justify-between text-xs font-medium">
+                  <span className="text-success">
+                    {primaryOutcome.label} {primaryPercent}%
+                  </span>
+                  <span className="text-destructive">
+                    {secondaryOutcome.label} {secondaryPercent}%
+                  </span>
+                </div>
+                <div className="flex h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="rounded-l-full bg-success transition-all"
+                    style={{ width: `${primaryPercent}%` }}
+                  />
+                  <div
+                    className="rounded-r-full bg-destructive transition-all"
+                    style={{ width: `${secondaryPercent}%` }}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mb-1 flex h-2 overflow-hidden rounded-full bg-muted">
+                  {outcomes.map((outcome, index) => (
+                    <div
+                      key={`${outcome.label}-${index}`}
+                      className={cn(
+                        "transition-all",
+                        outcomeBarColors[index % outcomeBarColors.length]
+                      )}
+                      style={{ width: `${normalizedProbabilities[index] ?? 0}%` }}
+                    />
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
+                  {outcomes.map((outcome, index) => (
+                    <span
+                      key={`${outcome.label}-${index}-label`}
+                      className="truncate text-muted-foreground"
+                    >
+                      {outcome.label}{" "}
+                      {Math.round(normalizedProbabilities[index] ?? 0)}%
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Stats */}

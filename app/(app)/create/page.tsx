@@ -40,6 +40,8 @@ import { UsdceInfoPanel } from "@/components/usdce-info-panel"
 
 const BETTING_TOKEN_SYMBOL = clientEnv.NEXT_PUBLIC_BETTING_TOKEN_SYMBOL
 const IS_USDCE_MODE = clientEnv.NEXT_PUBLIC_COLLATERAL_MODE === "usdce"
+const DEFAULT_INITIAL_LIQUIDITY = IS_USDCE_MODE ? "100" : "1"
+const INITIAL_LIQUIDITY_STEP = IS_USDCE_MODE ? "0.01" : "0.001"
 
 const steps = [
   "Question",
@@ -112,7 +114,7 @@ export default function CreateMarketPage() {
   const [endTime, setEndTime] = useState("23:59")
   const [resolutionSource, setResolutionSource] = useState("")
   const [outcomes, setOutcomes] = useState(["Yes", "No"])
-  const [liquidity, setLiquidity] = useState("1000")
+  const [liquidity, setLiquidity] = useState(DEFAULT_INITIAL_LIQUIDITY)
 
   function addTag() {
     const trimmed = tagInput.trim().toLowerCase()
@@ -520,8 +522,8 @@ export default function CreateMarketPage() {
                 id="liquidity"
                 type="number"
                 min="0"
-                step="100"
-                placeholder="1000"
+                step={INITIAL_LIQUIDITY_STEP}
+                placeholder={DEFAULT_INITIAL_LIQUIDITY}
                 value={liquidity}
                 onChange={(e) => setLiquidity(e.target.value)}
               />
