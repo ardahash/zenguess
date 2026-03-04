@@ -34,9 +34,12 @@ const quoteRequestSchema = z.object({
   amount: z.number().finite().positive().max(1_000_000),
   recipient: z.string().trim().regex(/^0x[a-fA-F0-9]{40}$/),
 })
+const chainDiscoveryQuerySchema = z.object({
+  asset: z.enum(["ETH", "USDC"]).optional(),
+})
 
 // GET /api/onramp/quote
-export async function GET() {
+export async function GET(request: Request) {
   const availability = getOnrampAvailability()
   if (!availability.enabled) {
     return NextResponse.json(
@@ -45,8 +48,22 @@ export async function GET() {
     )
   }
 
+  const url = new URL(request.url)
+  const parsedQuery = chainDiscoveryQuerySchema.safeParse({
+    asset: url.searchParams.get("asset") ?? undefined,
+  })
+  if (!parsedQuery.success) {
+    return NextResponse.json(
+      {
+        error: "Invalid query parameters.",
+        details: parsedQuery.error.flatten(),
+      },
+      { status: 400 }
+    )
+  }
+
   try {
-    const chains = await fetchSupportedOnrampChains()
+    const chains = await fetchSupportedOnrampChains(parsedQuery.data.asset)
     return NextResponse.json(
       { data: { chains } },
       {
