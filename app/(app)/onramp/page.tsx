@@ -30,13 +30,19 @@ interface OnrampChainOption {
 
 interface OnrampUserStepTransaction {
   type: "TRANSACTION"
-  sender: string
-  to: string
-  data: string
-  value?: string
-  gasLimit?: string
+  signerAddress?: string
+  chainKey?: string
   chainType: "EVM" | string
-  chainId: number
+  transaction: {
+    encoded: {
+      chainId: number
+      from?: string
+      to: string
+      data: string
+      value?: string
+      gasLimit?: string
+    }
+  }
 }
 
 interface OnrampQuote {
@@ -245,18 +251,21 @@ export default function OnrampPage() {
 
         await provider.request({
           method: "wallet_switchEthereumChain",
-          params: [{ chainId: chainIdToHex(step.chainId) }],
+          params: [{ chainId: chainIdToHex(step.transaction.encoded.chainId) }],
         })
 
+        const encodedTx = step.transaction.encoded
         const txHash = (await provider.request({
           method: "eth_sendTransaction",
           params: [
             {
-              from: step.sender,
-              to: step.to,
-              data: step.data,
-              value: decimalOrHexToHex(step.value),
-              gas: step.gasLimit ? decimalOrHexToHex(step.gasLimit) : undefined,
+              from: encodedTx.from ?? step.signerAddress,
+              to: encodedTx.to,
+              data: encodedTx.data,
+              value: decimalOrHexToHex(encodedTx.value),
+              gas: encodedTx.gasLimit
+                ? decimalOrHexToHex(encodedTx.gasLimit)
+                : undefined,
             },
           ],
         })) as string
