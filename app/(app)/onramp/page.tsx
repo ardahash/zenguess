@@ -17,9 +17,10 @@ import {
 } from "@/components/ui/select"
 import { formatAddress, formatUSD } from "@/lib/format"
 import { toUserFacingWeb3Error } from "@/lib/web3-errors"
+import { clientEnv } from "@/lib/env/client"
 
 type OnrampAsset = "ETH" | "USDC"
-const ONRAMP_ENABLED = false
+const ONRAMP_ENABLED = clientEnv.NEXT_PUBLIC_ONRAMP_ENABLED
 
 interface OnrampChainOption {
   chainKey: string
@@ -130,9 +131,9 @@ export default function OnrampPage() {
         }
 
         setChains(payload.data.chains)
-        if (!sourceChainKey && payload.data.chains[0]) {
-          setSourceChainKey(payload.data.chains[0].chainKey)
-        }
+        setSourceChainKey(
+          (current) => current || payload.data.chains[0]?.chainKey || ""
+        )
       } catch (error) {
         if (!active || controller.signal.aborted) {
           return
@@ -153,7 +154,7 @@ export default function OnrampPage() {
       active = false
       controller.abort()
     }
-  }, [sourceChainKey])
+  }, [])
 
   const parsedAmount = Number(amount)
   const canRequestQuote = useMemo(() => {
@@ -283,8 +284,9 @@ export default function OnrampPage() {
       {!ONRAMP_ENABLED ? (
         <Card>
           <CardContent className="p-6 text-sm text-muted-foreground">
-            Crosschain onramp is temporarily disabled while LayerZero API access
-            is pending.
+            Crosschain onramp is disabled. Set
+            ` NEXT_PUBLIC_ONRAMP_ENABLED=true ` and ensure
+            ` LAYERZERO_API_KEY ` is configured on the server.
           </CardContent>
         </Card>
       ) : null}

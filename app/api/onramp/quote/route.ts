@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
+import { clientEnv } from "@/lib/env/client"
+import { serverEnv } from "@/lib/env/server"
 import {
   fetchOnrampQuote,
   fetchSupportedOnrampChains,
@@ -7,7 +9,24 @@ import {
 } from "@/lib/onramp/layerzero"
 
 export const dynamic = "force-dynamic"
-const ONRAMP_ENABLED = false
+
+function getOnrampAvailability() {
+  if (!clientEnv.NEXT_PUBLIC_ONRAMP_ENABLED) {
+    return {
+      enabled: false as const,
+      reason: "Crosschain onramp is disabled by NEXT_PUBLIC_ONRAMP_ENABLED.",
+    }
+  }
+
+  if (!serverEnv.LAYERZERO_API_KEY) {
+    return {
+      enabled: false as const,
+      reason: "Missing LAYERZERO_API_KEY on the server environment.",
+    }
+  }
+
+  return { enabled: true as const, reason: null }
+}
 
 const quoteRequestSchema = z.object({
   sourceChainKey: z.string().trim().min(1).max(64),
@@ -18,9 +37,10 @@ const quoteRequestSchema = z.object({
 
 // GET /api/onramp/quote
 export async function GET() {
-  if (!ONRAMP_ENABLED) {
+  const availability = getOnrampAvailability()
+  if (!availability.enabled) {
     return NextResponse.json(
-      { error: "Crosschain onramp is temporarily disabled." },
+      { error: availability.reason },
       { status: 503 }
     )
   }
@@ -44,9 +64,10 @@ export async function GET() {
 
 // POST /api/onramp/quote
 export async function POST(request: Request) {
-  if (!ONRAMP_ENABLED) {
+  const availability = getOnrampAvailability()
+  if (!availability.enabled) {
     return NextResponse.json(
-      { error: "Crosschain onramp is temporarily disabled." },
+      { error: availability.reason },
       { status: 503 }
     )
   }
