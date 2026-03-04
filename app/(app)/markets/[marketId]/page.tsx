@@ -124,8 +124,7 @@ export default function MarketDetailPage() {
     )
   }
 
-  const yesProb = market.outcomes[0]?.probability ?? 0.5
-  const noProb = market.outcomes[1]?.probability ?? 0.5
+  const primaryOutcomeProb = market.outcomes[0]?.probability ?? 0.5
 
   return (
     <div className="flex flex-col gap-6">
@@ -188,23 +187,20 @@ export default function MarketDetailPage() {
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <div className="flex-1 rounded-lg border-2 border-success/30 bg-success/5 p-4 text-center">
-              <div className="text-3xl font-bold text-success">
-                {Math.round(yesProb * 100)}%
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {market.outcomes.map((outcome, index) => (
+              <div
+                key={`${outcome.label}-${index}`}
+                className="rounded-lg border-2 border-primary/20 bg-primary/5 p-4 text-center"
+              >
+                <div className="text-3xl font-bold text-primary">
+                  {Math.round((outcome.probability ?? 0) * 100)}%
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {outcome.label || `Outcome ${index + 1}`}
+                </div>
               </div>
-              <div className="text-sm text-muted-foreground">
-                {market.outcomes[0]?.label ?? "Yes"}
-              </div>
-            </div>
-            <div className="flex-1 rounded-lg border-2 border-destructive/30 bg-destructive/5 p-4 text-center">
-              <div className="text-3xl font-bold text-destructive">
-                {Math.round(noProb * 100)}%
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {market.outcomes[1]?.label ?? "No"}
-              </div>
-            </div>
+            ))}
           </div>
 
           <Card>
@@ -213,8 +209,8 @@ export default function MarketDetailPage() {
             </CardHeader>
             <CardContent>
               <OddsChart
-                startProb={Math.max(0.1, yesProb - 0.15)}
-                endProb={yesProb}
+                startProb={Math.max(0.1, primaryOutcomeProb - 0.15)}
+                endProb={primaryOutcomeProb}
                 days={30}
               />
             </CardContent>

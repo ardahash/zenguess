@@ -28,7 +28,7 @@ import type { Market } from "@/data/types"
 import { toUserFacingWeb3Error } from "@/lib/web3-errors"
 import { UsdceInfoPanel } from "@/components/usdce-info-panel"
 
-const MIN_TRADE_AMOUNT = 1
+const MIN_TRADE_AMOUNT = 0.01
 const MIN_SELL_SHARES_AMOUNT = 0.01
 const MAX_TRADE_AMOUNT = 1_000_000
 const MIN_BUY_USD = 1
@@ -69,14 +69,13 @@ export function TradePanel({ market, onTradeSuccess }: TradePanelProps) {
   const [amountError, setAmountError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
 
-  const yesProb = market.outcomes[0]?.probability ?? 0.5
-  const noProb = market.outcomes[1]?.probability ?? 0.5
   const isResolved = market.status === "resolved"
   const isClosedUnresolved = market.status === "closed"
   const onchainMode = isOnchainGatewayEnabled()
   const isEthCollateral = BETTING_TOKEN_SYMBOL.toUpperCase() === "ETH"
   const wrongNetwork = isConnected && isWrongNetwork(chainId)
   const parsedAmount = Number(amount)
+  const selectedOutcome = market.outcomes[outcomeIndex]
 
   function getMinTradeAmount(currentSide: "buy" | "sell"): number {
     if (onchainMode && currentSide === "sell") {
@@ -104,6 +103,12 @@ export function TradePanel({ market, onTradeSuccess }: TradePanelProps) {
 
     return `${tokenAmount} (${formatUSD(amountValue * ETH_USD_REFERENCE)})`
   }
+
+  useEffect(() => {
+    if (outcomeIndex >= market.outcomes.length) {
+      setOutcomeIndex(0)
+    }
+  }, [market.outcomes.length, outcomeIndex])
 
   const canSubmit = useMemo(() => {
     if (
@@ -412,31 +417,24 @@ export function TradePanel({ market, onTradeSuccess }: TradePanelProps) {
           </TabsList>
         </Tabs>
 
-        <div className="flex gap-2">
-          <button
-            onClick={() => setOutcomeIndex(0)}
-            className={cn(
-              "flex-1 rounded-lg border-2 px-3 py-2.5 text-center text-sm font-semibold transition-all",
-              outcomeIndex === 0
-                ? "border-success bg-success/10 text-success"
-                : "border-border text-muted-foreground hover:border-success/40"
-            )}
-          >
-            <div>{market.outcomes[0]?.label ?? "Yes"}</div>
-            <div className="text-xs opacity-75">{Math.round(yesProb * 100)}%</div>
-          </button>
-          <button
-            onClick={() => setOutcomeIndex(1)}
-            className={cn(
-              "flex-1 rounded-lg border-2 px-3 py-2.5 text-center text-sm font-semibold transition-all",
-              outcomeIndex === 1
-                ? "border-destructive bg-destructive/10 text-destructive"
-                : "border-border text-muted-foreground hover:border-destructive/40"
-            )}
-          >
-            <div>{market.outcomes[1]?.label ?? "No"}</div>
-            <div className="text-xs opacity-75">{Math.round(noProb * 100)}%</div>
-          </button>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {market.outcomes.map((outcome, index) => (
+            <button
+              key={`${outcome.label}-${index}`}
+              onClick={() => setOutcomeIndex(index)}
+              className={cn(
+                "rounded-lg border-2 px-3 py-2.5 text-center text-sm font-semibold transition-all",
+                outcomeIndex === index
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+              )}
+            >
+              <div>{outcome.label}</div>
+              <div className="text-xs opacity-75">
+                {Math.round((outcome.probability ?? 0) * 100)}%
+              </div>
+            </button>
+          ))}
         </div>
 
         <div className="flex gap-2">
@@ -474,7 +472,7 @@ export function TradePanel({ market, onTradeSuccess }: TradePanelProps) {
                 ? "0.01"
                 : onchainMode && side === "buy" && isEthCollateral
                   ? String(ETH_BUY_INPUT_STEP)
-                  : "1"
+                  : "0.01"
             }
             placeholder="0.00"
             value={amount}
@@ -585,7 +583,7 @@ export function TradePanel({ market, onTradeSuccess }: TradePanelProps) {
             `Switch to ${defaultChain.name}`
           ) : (
             `${side === "buy" ? "Buy" : "Sell"} ${
-              market.outcomes[outcomeIndex]?.label ?? "Outcome"
+              selectedOutcome?.label ?? "Outcome"
             }`
           )}
         </Button>
