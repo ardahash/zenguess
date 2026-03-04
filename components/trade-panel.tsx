@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import type { Market } from "@/data/types"
 import { toUserFacingWeb3Error } from "@/lib/web3-errors"
+import { UsdceInfoPanel } from "@/components/usdce-info-panel"
 
 const MIN_TRADE_AMOUNT = 1
 const MIN_SELL_SHARES_AMOUNT = 0.01
@@ -395,6 +396,9 @@ export function TradePanel({ market, onTradeSuccess }: TradePanelProps) {
         <CardTitle className="text-base">Trade</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        {clientEnv.NEXT_PUBLIC_COLLATERAL_MODE === "usdce" ? (
+          <UsdceInfoPanel />
+        ) : null}
         <Tabs value={side} onValueChange={(value) => setSide(value as "buy" | "sell")}>
           <TabsList className="w-full">
             <TabsTrigger value="buy" className="flex-1">
@@ -589,7 +593,7 @@ export function TradePanel({ market, onTradeSuccess }: TradePanelProps) {
         <p className="text-center text-[10px] text-muted-foreground">
           {onchainMode
             ? "Trades execute directly against ZenGuessMarketManager on Horizen."
-            : `${BETTING_TOKEN_SYMBOL} mode is simulated until the ETH-collateral contract deployment is complete.`}
+            : `${BETTING_TOKEN_SYMBOL} mode is simulated until on-chain collateral execution is enabled.`}
         </p>
       </CardContent>
     </Card>

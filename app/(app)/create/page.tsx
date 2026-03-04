@@ -36,8 +36,10 @@ import {
 import { defaultChain } from "@/lib/chains"
 import { isWrongNetwork } from "@/lib/web3"
 import { toUserFacingWeb3Error } from "@/lib/web3-errors"
+import { UsdceInfoPanel } from "@/components/usdce-info-panel"
 
 const BETTING_TOKEN_SYMBOL = clientEnv.NEXT_PUBLIC_BETTING_TOKEN_SYMBOL
+const IS_USDCE_MODE = clientEnv.NEXT_PUBLIC_COLLATERAL_MODE === "usdce"
 
 const steps = [
   "Question",
@@ -309,6 +311,7 @@ export default function CreateMarketPage() {
           Set up a new prediction market in a few steps
         </p>
       </div>
+      {IS_USDCE_MODE ? <UsdceInfoPanel /> : null}
 
       {/* Progress */}
       <div className="flex items-center gap-1" role="progressbar" aria-valuenow={step + 1} aria-valuemax={steps.length}>

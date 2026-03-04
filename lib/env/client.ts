@@ -135,8 +135,7 @@ if (!parsedClientEnv.success) {
 
 const env = parsedClientEnv.data
 const derivedBettingSymbol =
-  env.NEXT_PUBLIC_BETTING_TOKEN_SYMBOL ||
-  (env.NEXT_PUBLIC_COLLATERAL_MODE === "usdce" ? "USDC.e" : "ETH")
+  env.NEXT_PUBLIC_COLLATERAL_MODE === "usdce" ? "USDC.e" : "ETH"
 
 export const clientEnv = {
   ...env,
