@@ -206,7 +206,9 @@ export async function fetchSupportedOnrampChains(
   asset?: OnrampAsset
 ): Promise<OnrampChainOption[]> {
   const payload = await requestLayerZero<{ chains: LayerZeroChain[] }>("/chains")
-  const allowedChainIds = new Set([1, 8453, 42161, 10])
+  // Arbitrum USDC currently triggers a MetaMask deceptive-request warning on the
+  // approval spender. Keep routes on chains with cleaner wallet UX by default.
+  const allowedChainIds = new Set([1, 8453, 10])
   const allowedChains = payload.chains
     .filter((chain) => chain.chainType === "EVM" && allowedChainIds.has(chain.chainId))
     .sort((a, b) => a.name.localeCompare(b.name))

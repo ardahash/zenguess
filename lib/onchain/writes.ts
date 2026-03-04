@@ -7,6 +7,7 @@ import {
 } from "viem"
 import type {
   ClaimWinningsOutput,
+  ResolveMarketInput,
   SubmitTradeInput,
   SubmitTradeOutput,
 } from "@/lib/gateways/market-gateway"
@@ -39,6 +40,12 @@ interface TradeQuote {
 export interface CreateMarketWriteResult {
   txHash: `0x${string}`
   marketId: string
+}
+
+export interface ResolveMarketWriteResult {
+  txHash: `0x${string}`
+  marketId: string
+  resolvedOutcome: number
 }
 
 async function getConnectedAccount(walletClient: WalletClient): Promise<Address> {
@@ -375,5 +382,41 @@ export async function claimWinningsWithWallet(
   return {
     success: true,
     amount: Number(formatUnits(payout, collateralDecimals)),
+  }
+}
+
+export async function resolveMarketWithWallet(
+  context: OnchainContext,
+  input: ResolveMarketInput
+): Promise<ResolveMarketWriteResult> {
+  const account = await getConnectedAccount(context.walletClient)
+  const chainId = await getChainId(context.walletClient)
+  const contracts = getContractBundle(chainId)
+  const marketId = parseMarketId(input.marketId)
+
+  if (
+    !Number.isInteger(input.resolvedOutcome) ||
+    input.resolvedOutcome < 0 ||
+    input.resolvedOutcome > 255
+  ) {
+    throw new Error("Resolved outcome must be an integer between 0 and 255.")
+  }
+
+  const simulation = await context.publicClient.simulateContract({
+    account,
+    address: contracts.marketManager,
+    abi: zenGuessMarketManagerAbi,
+    functionName: "resolveMarket",
+    args: [marketId, input.resolvedOutcome],
+  })
+  const txHash = await context.walletClient.writeContract(simulation.request)
+  await context.publicClient.waitForTransactionReceipt({
+    hash: txHash,
+  })
+
+  return {
+    txHash,
+    marketId: marketId.toString(),
+    resolvedOutcome: input.resolvedOutcome,
   }
 }

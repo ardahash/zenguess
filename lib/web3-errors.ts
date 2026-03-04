@@ -37,6 +37,10 @@ export function toUserFacingWeb3Error(
     return "Market is no longer open for this action."
   }
 
+  if (message.includes("invalidaddress")) {
+    return "Only the configured resolver/owner wallet can perform this action."
+  }
+
   if (message.includes("invalidoutcome")) {
     return "Selected outcome is invalid for this market."
   }

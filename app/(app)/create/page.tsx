@@ -84,10 +84,17 @@ function sleep(ms: number): Promise<void> {
   })
 }
 
+const WALLET_CLIENT_READY_MAX_ATTEMPTS = 6
+const WALLET_CLIENT_READY_RETRY_MS = 350
+
 export default function CreateMarketPage() {
   const router = useRouter()
   const { address, chainId, isConnected } = useAccount()
-  const { data: walletClient } = useWalletClient()
+  const {
+    data: walletClient,
+    refetch: refetchWalletClient,
+    isFetching: isFetchingWalletClient,
+  } = useWalletClient({ chainId: defaultChain.id })
   const publicClient = usePublicClient({ chainId: defaultChain.id })
   const [step, setStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -192,12 +199,30 @@ export default function CreateMarketPage() {
         if (isWrongNetwork(chainId)) {
           throw new Error(`Switch to ${defaultChain.name} before creating a market.`)
         }
-        if (!walletClient || !publicClient) {
-          throw new Error("Wallet client is not ready yet. Please try again.")
+        if (!publicClient) {
+          throw new Error("Public RPC client is not ready yet. Please try again.")
+        }
+
+        let readyWalletClient = walletClient
+        if (!readyWalletClient) {
+          for (
+            let attempt = 0;
+            attempt < WALLET_CLIENT_READY_MAX_ATTEMPTS && !readyWalletClient;
+            attempt += 1
+          ) {
+            await sleep(WALLET_CLIENT_READY_RETRY_MS)
+            const refreshed = await refetchWalletClient()
+            readyWalletClient = refreshed.data
+          }
+        }
+        if (!readyWalletClient) {
+          throw new Error(
+            "Wallet client is still initializing. Wait a few seconds and try again."
+          )
         }
 
         const result = await createMarketOnchain(
-          { walletClient, publicClient },
+          { walletClient: readyWalletClient, publicClient },
           {
             question: payload.question.trim(),
             description: payload.description.trim(),
@@ -591,11 +616,19 @@ export default function CreateMarketPage() {
             <ArrowRight className="ml-1 size-4" />
           </Button>
         ) : (
-          <Button onClick={handleCreate} disabled={isSubmitting}>
+          <Button
+            onClick={handleCreate}
+            disabled={isSubmitting || (isOnchainGatewayEnabled() && isFetchingWalletClient)}
+          >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-1.5 size-4 animate-spin" />
                 Creating...
+              </>
+            ) : isOnchainGatewayEnabled() && isFetchingWalletClient ? (
+              <>
+                <Loader2 className="mr-1.5 size-4 animate-spin" />
+                Preparing Wallet...
               </>
             ) : (
               <>

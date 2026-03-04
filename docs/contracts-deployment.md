@@ -44,6 +44,25 @@ DEPLOYMENT_LABEL=usdce npm run contracts:deploy:mainnet
 
 This writes `deployments/horizenMainnet-usdce.json`.
 
+## Resolve a Market
+
+Testnet:
+
+```bash
+npm run contracts:resolve:testnet -- --market-id 1 --outcome 0
+```
+
+Mainnet:
+
+```bash
+npm run contracts:resolve:mainnet -- --market-id 1 --outcome 0 --deployment-label usdce
+```
+
+Notes:
+- `--outcome` is a zero-based outcome index.
+- Resolver/owner wallet only.
+- Market must be closed (past end time) and unresolved.
+
 ## Latest Deployments (March 3, 2026)
 
 - Testnet:

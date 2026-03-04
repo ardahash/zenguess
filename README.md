@@ -35,6 +35,8 @@ Open `http://localhost:3000`.
 - `npm run contracts:test`: run Solidity tests (Hardhat)
 - `npm run contracts:deploy:testnet`: deploy contracts to Horizen testnet
 - `npm run contracts:deploy:mainnet`: deploy contracts to Horizen mainnet
+- `npm run contracts:resolve:testnet -- --market-id <id> --outcome <index>`: resolve a market on testnet
+- `npm run contracts:resolve:mainnet -- --market-id <id> --outcome <index>`: resolve a market on mainnet
 
 ## Environment
 
@@ -80,12 +82,16 @@ Contract deployment requires:
   - `GET /api/portfolio?address=`
   - `POST /api/trades/simulate`
   - `POST /api/trades` (mock mode only)
-  - `GET /api/onramp/quote`
-  - `POST /api/onramp/quote`
+- `GET /api/onramp/quote`
+- `POST /api/onramp/quote`
 
 Gateway mode is controlled by `NEXT_PUBLIC_GATEWAY_MODE` (`onchain` or `mock`).
 Collateral mode is controlled by `NEXT_PUBLIC_COLLATERAL_MODE` (`usdce` or `eth`).
 Current default is `onchain` + `usdce` collateral.
+
+Resolver operations are available via:
+- UI page: `/resolve` (wallet-signed resolve for closed markets)
+- CLI: `scripts/ops/resolve-market.js` via `contracts:resolve:*`
 
 ## Contract Status
 

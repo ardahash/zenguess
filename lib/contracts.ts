@@ -19,6 +19,7 @@ import {
 import {
   claimWinningsWithWallet,
   createMarketWithWallet,
+  resolveMarketWithWallet,
   submitTradeWithWallet,
 } from "@/lib/onchain/writes"
 
@@ -185,4 +186,14 @@ export async function claimWinningsOnchain(
   }
 ) {
   return claimWinningsWithWallet(context, input.marketId)
+}
+
+export async function resolveMarketOnchain(
+  context: WalletExecutionContext,
+  input: {
+    marketId: string
+    resolvedOutcome: number
+  }
+) {
+  return resolveMarketWithWallet(context, input)
 }

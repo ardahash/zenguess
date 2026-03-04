@@ -10,6 +10,7 @@ import {
   Briefcase,
   Activity,
   ArrowLeftRight,
+  Scale,
   BookOpen,
   Settings,
   Menu,
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/activity", label: "Activity", icon: Activity },
   { href: "/onramp", label: "Onramp", icon: ArrowLeftRight },
   { href: "/create", label: "Create", icon: PlusCircle },
+  { href: "/resolve", label: "Resolve", icon: Scale },
   { href: "/docs", label: "Docs", icon: BookOpen },
   { href: "/settings", label: "Settings", icon: Settings },
 ]

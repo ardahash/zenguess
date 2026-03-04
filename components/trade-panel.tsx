@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAccount, usePublicClient, useWalletClient } from "wagmi"
@@ -70,6 +71,7 @@ export function TradePanel({ market, onTradeSuccess }: TradePanelProps) {
   const yesProb = market.outcomes[0]?.probability ?? 0.5
   const noProb = market.outcomes[1]?.probability ?? 0.5
   const isResolved = market.status === "resolved"
+  const isClosedUnresolved = market.status === "closed"
   const onchainMode = isOnchainGatewayEnabled()
   const isEthCollateral = BETTING_TOKEN_SYMBOL.toUpperCase() === "ETH"
   const wrongNetwork = isConnected && isWrongNetwork(chainId)
@@ -103,7 +105,13 @@ export function TradePanel({ market, onTradeSuccess }: TradePanelProps) {
   }
 
   const canSubmit = useMemo(() => {
-    if (!isConnected || wrongNetwork || isResolved || isSubmitting) {
+    if (
+      !isConnected ||
+      wrongNetwork ||
+      isResolved ||
+      isClosedUnresolved ||
+      isSubmitting
+    ) {
       return false
     }
     if (amountError || !amount || Number.isNaN(parsedAmount)) {
@@ -114,6 +122,7 @@ export function TradePanel({ market, onTradeSuccess }: TradePanelProps) {
     amount,
     amountError,
     isConnected,
+    isClosedUnresolved,
     isResolved,
     isSubmitting,
     parsedAmount,
@@ -357,6 +366,24 @@ export function TradePanel({ market, onTradeSuccess }: TradePanelProps) {
               {isConnected ? "Claim Winnings" : "Connect Wallet to Claim"}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (isClosedUnresolved) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Market Closed</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-sm text-muted-foreground">
+            Trading has ended. This market is waiting for resolver settlement.
+          </p>
+          <Button asChild variant="outline" className="w-full">
+            <Link href={`/resolve?marketId=${market.id}`}>Resolve Market</Link>
+          </Button>
         </CardContent>
       </Card>
     )

@@ -300,6 +300,13 @@ export default function OnrampPage() {
           Bridge USDC from your source chain to Horizen, then trade USDC.e
           markets on ZenGuess.
         </p>
+        <p className="text-xs text-muted-foreground">
+          Supported source chains: Ethereum, Base, and Optimism.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          For lower gas, use Base when possible. Gas is paid on the source
+          chain and estimated by your wallet.
+        </p>
         <a
           href="https://layerzero.network/"
           target="_blank"
@@ -500,6 +507,10 @@ export default function OnrampPage() {
             <p className="text-xs text-muted-foreground">
               Execution runs LayerZero quote transaction steps from your wallet.
               Keep this tab open until all steps complete.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Note: MetaMask controls final gas pricing. You can choose lower
+              speed presets, but very low gas may delay or fail bridging.
             </p>
           </CardContent>
         </Card>
