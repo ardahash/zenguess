@@ -120,10 +120,13 @@ export default function OnrampPage() {
       try {
         setIsLoadingChains(true)
         setChainsError(null)
-        const response = await fetch("/api/onramp/quote", {
+        const response = await fetch(
+          `/api/onramp/quote?asset=${encodeURIComponent(asset)}`,
+          {
           signal: controller.signal,
           cache: "no-store",
-        })
+          }
+        )
         if (!response.ok) {
           const payload = (await response.json()) as { error?: string }
           throw new Error(payload.error ?? "Failed to load onramp chains.")
@@ -137,9 +140,16 @@ export default function OnrampPage() {
         }
 
         setChains(payload.data.chains)
-        setSourceChainKey(
-          (current) => current || payload.data.chains[0]?.chainKey || ""
-        )
+        setSourceChainKey((current) => {
+          if (
+            current &&
+            payload.data.chains.some((chain) => chain.chainKey === current)
+          ) {
+            return current
+          }
+
+          return payload.data.chains[0]?.chainKey ?? ""
+        })
       } catch (error) {
         if (!active || controller.signal.aborted) {
           return
@@ -160,7 +170,7 @@ export default function OnrampPage() {
       active = false
       controller.abort()
     }
-  }, [])
+  }, [asset])
 
   const parsedAmount = Number(amount)
   const canRequestQuote = useMemo(() => {
@@ -369,6 +379,11 @@ export default function OnrampPage() {
 
           {chainsError ? (
             <p className="text-xs text-destructive">{chainsError}</p>
+          ) : chains.length === 0 && !isLoadingChains ? (
+            <p className="text-xs text-muted-foreground">
+              No supported {asset} route to Horizen is currently available from
+              the configured source chains.
+            </p>
           ) : null}
           {quoteError ? <p className="text-xs text-destructive">{quoteError}</p> : null}
 
