@@ -5,6 +5,7 @@ import { useAccount } from "wagmi"
 import { ArrowLeftRight, ExternalLink, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -299,6 +300,17 @@ export default function OnrampPage() {
           Bridge USDC from your source chain to Horizen, then trade USDC.e
           markets on ZenGuess.
         </p>
+        <a
+          href="https://layerzero.network/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex"
+        >
+          <Badge variant="outline" className="text-xs">
+            Powered by LayerZero
+            <ExternalLink className="ml-1 size-3" />
+          </Badge>
+        </a>
       </div>
 
       {!ONRAMP_ENABLED ? (

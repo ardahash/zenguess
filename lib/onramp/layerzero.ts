@@ -54,12 +54,15 @@ interface LayerZeroQuote {
   srcAmount: string
   dstAmount: string
   dstAmountMin: string
-  srcToken: LayerZeroToken
-  dstToken: LayerZeroToken
   routeSteps?: Array<{ type?: string }>
   feeUsd?: string
   feePercent?: string
   userSteps: LayerZeroUserStep[]
+}
+
+interface LayerZeroQuotesResponse {
+  quotes: LayerZeroQuote[]
+  tokens?: LayerZeroToken[]
 }
 
 function getHeaders(): Record<string, string> {
@@ -384,6 +387,24 @@ function formatAmountFromUnits(amount: string, decimals: number): number {
   return Number(amount) / divisor
 }
 
+function findTokenInQuotePayload(
+  payloadTokens: LayerZeroToken[] | undefined,
+  chainKey: string,
+  address: string
+): LayerZeroToken | null {
+  if (!payloadTokens || payloadTokens.length === 0) {
+    return null
+  }
+
+  const normalizedAddress = normalizeAddress(address)
+  const match = payloadTokens.find(
+    (token) =>
+      token.chainKey === chainKey &&
+      normalizeAddress(token.address) === normalizedAddress
+  )
+  return match ?? null
+}
+
 export interface OnrampQuoteResult {
   requestId: string
   sourceChainKey: string
@@ -418,7 +439,7 @@ export async function fetchOnrampQuote(args: {
     })
 
   const amountIn = parseUnits(args.amount.toString(), sourceToken.decimals).toString()
-  const payload = await requestLayerZero<{ quotes: LayerZeroQuote[] }>("/quotes", {
+  const payload = await requestLayerZero<LayerZeroQuotesResponse>("/quotes", {
     method: "POST",
     body: JSON.stringify({
       srcChainKey: args.sourceChainKey,
@@ -436,17 +457,33 @@ export async function fetchOnrampQuote(args: {
     throw new Error("No bridge quote available for this route right now.")
   }
 
+  const resolvedSourceToken =
+    findTokenInQuotePayload(
+      payload.tokens,
+      sourceToken.chainKey,
+      sourceToken.address
+    ) ?? sourceToken
+  const resolvedDestinationToken =
+    findTokenInQuotePayload(
+      payload.tokens,
+      destinationToken.chainKey,
+      destinationToken.address
+    ) ?? destinationToken
+
   return {
     requestId: quote.id,
     sourceChainKey: args.sourceChainKey,
     destinationChainKey,
-    sourceToken: quote.srcToken,
-    destinationToken: quote.dstToken,
-    amountIn: formatAmountFromUnits(quote.srcAmount, quote.srcToken.decimals),
-    amountOut: formatAmountFromUnits(quote.dstAmount, quote.dstToken.decimals),
+    sourceToken: resolvedSourceToken,
+    destinationToken: resolvedDestinationToken,
+    amountIn: formatAmountFromUnits(quote.srcAmount, resolvedSourceToken.decimals),
+    amountOut: formatAmountFromUnits(
+      quote.dstAmount,
+      resolvedDestinationToken.decimals
+    ),
     amountOutMin: formatAmountFromUnits(
       quote.dstAmountMin,
-      quote.dstToken.decimals
+      resolvedDestinationToken.decimals
     ),
     routeType: quote.routeSteps?.[0]?.type ?? "value-transfer",
     feeUsd: quote.feeUsd,
