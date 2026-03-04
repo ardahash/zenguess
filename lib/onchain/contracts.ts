@@ -7,17 +7,42 @@ export interface MarketContractBundle {
   collateralToken: Address
 }
 
-export const CONTRACT_ADDRESSES: Record<"mainnet" | "testnet", MarketContractBundle> =
-  {
-    mainnet: {
+type CollateralMode = "usdce" | "eth"
+
+const COLLATERAL_ADDRESSES = {
+  weth: "0x4200000000000000000000000000000000000006",
+  usdce: "0xDF7108f8B10F9b9eC1aba01CCa057268cbf86B6c",
+} as const satisfies Record<string, Address>
+
+export const CONTRACT_ADDRESSES: Record<
+  "mainnet" | "testnet",
+  Record<CollateralMode, MarketContractBundle>
+> = {
+  mainnet: {
+    // Legacy ETH/WETH manager kept for internal testing.
+    eth: {
       marketManager: "0xE3dB30ff10E851aA1f3e50Ed212281CB5e98a9E8",
-      collateralToken: "0x4200000000000000000000000000000000000006",
+      collateralToken: COLLATERAL_ADDRESSES.weth,
     },
-    testnet: {
+    // Default production manager for USDC.e collateral.
+    usdce: {
+      marketManager: "0x770fc931e07A6Df2f5F0Aa481a7c6AeC45286Ea7",
+      collateralToken: COLLATERAL_ADDRESSES.usdce,
+    },
+  },
+  testnet: {
+    // ETH-only manager remains available for testnet.
+    eth: {
       marketManager: "0xba7147BCE0e12414e7612Ab72D386FeBAdB3322D",
-      collateralToken: "0x4200000000000000000000000000000000000006",
+      collateralToken: COLLATERAL_ADDRESSES.weth,
     },
-  }
+    // Placeholder until a USDC.e testnet deployment is performed.
+    usdce: {
+      marketManager: "0xba7147BCE0e12414e7612Ab72D386FeBAdB3322D",
+      collateralToken: COLLATERAL_ADDRESSES.weth,
+    },
+  },
+}
 
 export const zenGuessMarketManagerAbi = [
   {
@@ -280,15 +305,17 @@ export const wethAbi = [
 ] as const satisfies Abi
 
 export function getContractBundle(chainId: number = defaultChain.id): MarketContractBundle {
+  const collateralMode = clientEnv.NEXT_PUBLIC_COLLATERAL_MODE
+
   if (chainId === horizenTestnet.id) {
-    return CONTRACT_ADDRESSES.testnet
+    return CONTRACT_ADDRESSES.testnet[collateralMode]
   }
 
   if (chainId === horizenMainnet.id) {
-    return CONTRACT_ADDRESSES.mainnet
+    return CONTRACT_ADDRESSES.mainnet[collateralMode]
   }
 
-  return clientEnv.NEXT_PUBLIC_DEFAULT_CHAIN === "testnet"
-    ? CONTRACT_ADDRESSES.testnet
-    : CONTRACT_ADDRESSES.mainnet
+  const networkKey =
+    clientEnv.NEXT_PUBLIC_DEFAULT_CHAIN === "testnet" ? "testnet" : "mainnet"
+  return CONTRACT_ADDRESSES[networkKey][collateralMode]
 }

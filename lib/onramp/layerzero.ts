@@ -91,6 +91,8 @@ let tokenCatalogCache:
     }
   | undefined
 const TOKEN_CATALOG_CACHE_TTL_MS = 60_000
+const routeSupportCache = new Map<string, { expiresAt: number; supported: boolean }>()
+const ROUTE_SUPPORT_CACHE_TTL_MS = 60_000
 
 async function requestLayerZero<T>(
   path: string,
@@ -154,6 +156,12 @@ async function chainHasAssetRouteToHorizen(
   destinationChainKey: string,
   asset: OnrampAsset
 ): Promise<boolean> {
+  const cacheKey = `${chainKey}:${destinationChainKey}:${asset}`
+  const cached = routeSupportCache.get(cacheKey)
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.supported
+  }
+
   const sourceCandidates = (await fetchLayerZeroTokens())
     .filter(
       (token) =>
@@ -176,10 +184,18 @@ async function chainHasAssetRouteToHorizen(
           isAssetMatch(asset, token.symbol)
       )
     ) {
+      routeSupportCache.set(cacheKey, {
+        supported: true,
+        expiresAt: Date.now() + ROUTE_SUPPORT_CACHE_TTL_MS,
+      })
       return true
     }
   }
 
+  routeSupportCache.set(cacheKey, {
+    supported: false,
+    expiresAt: Date.now() + ROUTE_SUPPORT_CACHE_TTL_MS,
+  })
   return false
 }
 

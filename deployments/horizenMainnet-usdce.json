@@ -1,0 +1,13 @@
+{
+  "network": "horizenMainnet",
+  "chainId": 26514,
+  "deployedAt": "2026-03-04T01:09:05.957Z",
+  "deployer": "0x0F6A41a801E6B6490Da4e8FcC4394c70809deB9e",
+  "owner": "0x0F6A41a801E6B6490Da4e8FcC4394c70809deB9e",
+  "resolver": "0x0F6A41a801E6B6490Da4e8FcC4394c70809deB9e",
+  "tradingFeeBps": 200,
+  "contracts": {
+    "collateralToken": "0xDF7108f8B10F9b9eC1aba01CCa057268cbf86B6c",
+    "marketManager": "0x770fc931e07A6Df2f5F0Aa481a7c6AeC45286Ea7"
+  }
+}

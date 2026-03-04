@@ -1,8 +1,14 @@
+import { clientEnv } from "@/lib/env/client"
+
 export function toUserFacingWeb3Error(
   error: unknown,
   fallback: string = "Transaction failed. Please try again."
 ): string {
   const message = extractErrorMessage(error).toLowerCase()
+  const onrampHint =
+    clientEnv.NEXT_PUBLIC_COLLATERAL_MODE === "usdce"
+      ? " Bridge USDC to Horizen from the Onramp page and retry."
+      : ""
 
   if (message.includes("user rejected")) {
     return "Transaction was rejected in your wallet."
@@ -12,7 +18,7 @@ export function toUserFacingWeb3Error(
     message.includes("transfer amount exceeds balance") ||
     message.includes("insufficient balance")
   ) {
-    return "Insufficient betting-token balance for this transaction. Reduce amount or fund your wallet."
+    return `Insufficient betting-token balance for this transaction. Reduce amount or fund your wallet.${onrampHint}`
   }
 
   if (message.includes("insufficient allowance")) {
@@ -20,7 +26,7 @@ export function toUserFacingWeb3Error(
   }
 
   if (message.includes("insufficient funds")) {
-    return "Insufficient ZEN for gas fees. Add gas funds and retry."
+    return "Insufficient ETH for gas fees. Add gas funds and retry."
   }
 
   if (message.includes("deadlineexpired") || message.includes("deadline expired")) {

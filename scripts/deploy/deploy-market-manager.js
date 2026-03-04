@@ -16,6 +16,26 @@ function envNumber(name, fallback) {
   return parsed
 }
 
+function envSlug(name) {
+  const raw = process.env[name]
+  if (!raw) {
+    return ""
+  }
+
+  const slug = raw.trim().toLowerCase()
+  if (slug.length === 0) {
+    return ""
+  }
+
+  if (!/^[a-z0-9-_]+$/.test(slug)) {
+    throw new Error(
+      `${name} must contain only lowercase letters, numbers, '-' or '_'.`
+    )
+  }
+
+  return slug
+}
+
 async function main() {
   const [deployer] = await hre.ethers.getSigners()
   const network = await hre.ethers.provider.getNetwork()
@@ -69,7 +89,11 @@ async function main() {
   if (!fs.existsSync(deploymentDir)) {
     fs.mkdirSync(deploymentDir, { recursive: true })
   }
-  const deploymentFile = path.join(deploymentDir, `${hre.network.name}.json`)
+  const deploymentLabel = envSlug("DEPLOYMENT_LABEL")
+  const deploymentFileName = deploymentLabel
+    ? `${hre.network.name}-${deploymentLabel}.json`
+    : `${hre.network.name}.json`
+  const deploymentFile = path.join(deploymentDir, deploymentFileName)
   fs.writeFileSync(deploymentFile, JSON.stringify(output, null, 2))
 
   console.log(`Deployed ZenGuessMarketManager at: ${managerAddress}`)

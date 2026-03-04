@@ -14,7 +14,14 @@ const clientSchema = z.object({
   NEXT_PUBLIC_ENABLE_DEMO_DATA: z.enum(["true", "false"]).default("false"),
   NEXT_PUBLIC_GATEWAY_MODE: z.enum(["mock", "onchain"]).default("onchain"),
   NEXT_PUBLIC_ONRAMP_ENABLED: z.enum(["true", "false"]).default("false"),
-  NEXT_PUBLIC_BETTING_TOKEN_SYMBOL: z.string().trim().min(1).max(16).default("ETH"),
+  NEXT_PUBLIC_COLLATERAL_MODE: z.enum(["usdce", "eth"]).default("usdce"),
+  NEXT_PUBLIC_BETTING_TOKEN_SYMBOL: z
+    .string()
+    .trim()
+    .min(1)
+    .max(16)
+    .optional()
+    .or(z.literal("")),
   NEXT_PUBLIC_ETH_USD_REFERENCE: z.coerce.number().positive().default(3000),
   NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_MAINNET: z
     .string()
@@ -97,6 +104,9 @@ const parsedClientEnv = clientSchema.safeParse({
   NEXT_PUBLIC_ONRAMP_ENABLED: optionalEnv(
     process.env.NEXT_PUBLIC_ONRAMP_ENABLED
   ),
+  NEXT_PUBLIC_COLLATERAL_MODE: optionalEnv(
+    process.env.NEXT_PUBLIC_COLLATERAL_MODE
+  ),
   NEXT_PUBLIC_BETTING_TOKEN_SYMBOL: optionalEnv(
     process.env.NEXT_PUBLIC_BETTING_TOKEN_SYMBOL
   ),
@@ -124,13 +134,16 @@ if (!parsedClientEnv.success) {
 }
 
 const env = parsedClientEnv.data
+const derivedBettingSymbol =
+  env.NEXT_PUBLIC_BETTING_TOKEN_SYMBOL ||
+  (env.NEXT_PUBLIC_COLLATERAL_MODE === "usdce" ? "USDC.e" : "ETH")
 
 export const clientEnv = {
   ...env,
   NEXT_PUBLIC_ENABLE_MOCK_WALLET: env.NEXT_PUBLIC_ENABLE_MOCK_WALLET === "true",
   NEXT_PUBLIC_ENABLE_DEMO_DATA: env.NEXT_PUBLIC_ENABLE_DEMO_DATA === "true",
   NEXT_PUBLIC_ONRAMP_ENABLED: env.NEXT_PUBLIC_ONRAMP_ENABLED === "true",
-  NEXT_PUBLIC_BETTING_TOKEN_SYMBOL: env.NEXT_PUBLIC_BETTING_TOKEN_SYMBOL,
+  NEXT_PUBLIC_BETTING_TOKEN_SYMBOL: derivedBettingSymbol,
   NEXT_PUBLIC_ETH_USD_REFERENCE: env.NEXT_PUBLIC_ETH_USD_REFERENCE,
   NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_MAINNET:
     env.NEXT_PUBLIC_MARKET_MANAGER_DEPLOY_BLOCK_MAINNET || undefined,

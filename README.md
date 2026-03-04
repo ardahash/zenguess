@@ -52,6 +52,7 @@ Contract deployment requires:
 - `LAYERZERO_API_KEY` (for `/onramp` quote API)
 - `HORIZEN_TESTNET_RPC_HTTP` and/or `HORIZEN_MAINNET_RPC_HTTP`
 - optionally `COLLATERAL_TOKEN_ADDRESS`, `RESOLVER_ADDRESS`, `DEPLOY_OWNER_ADDRESS`, `TRADING_FEE_BPS`
+- optionally `DEPLOYMENT_LABEL` to keep multiple deployment records (e.g. `horizenMainnet-usdce.json`)
 
 ## Architecture
 
@@ -83,19 +84,24 @@ Contract deployment requires:
   - `POST /api/onramp/quote`
 
 Gateway mode is controlled by `NEXT_PUBLIC_GATEWAY_MODE` (`onchain` or `mock`).
-Current default is `onchain` with WETH collateral manager deployment.
+Collateral mode is controlled by `NEXT_PUBLIC_COLLATERAL_MODE` (`usdce` or `eth`).
+Current default is `onchain` + `usdce` collateral.
 
 ## Contract Status
 
 The repo now contains a production-grade draft contract implementation and deploy/test pipeline.
 
 - Contracts are drafted and tested locally.
-- Mainnet WETH deployment executed on March 2, 2026:
+- Mainnet ETH/WETH deployment executed on March 2, 2026 (legacy/internal testing):
   - `WETH`: `0x4200000000000000000000000000000000000006`
   - `ZenGuessMarketManager`: `0xE3dB30ff10E851aA1f3e50Ed212281CB5e98a9E8`
   - Deployment record: [deployments/horizenMainnet.json](/c:/Users/Arda/othergithubstuff/zenguess/deployments/horizenMainnet.json)
+- Mainnet USDC.e deployment executed on March 3, 2026 (production default):
+  - `USDC.e`: `0xDF7108f8B10F9b9eC1aba01CCa057268cbf86B6c`
+  - `ZenGuessMarketManager`: `0x770fc931e07A6Df2f5F0Aa481a7c6AeC45286Ea7`
+  - Deployment record: [deployments/horizenMainnet-usdce.json](/c:/Users/Arda/othergithubstuff/zenguess/deployments/horizenMainnet-usdce.json)
 - Testnet WETH deployment executed on March 2, 2026:
   - `WETH`: `0x4200000000000000000000000000000000000006`
   - `ZenGuessMarketManager`: `0xba7147BCE0e12414e7612Ab72D386FeBAdB3322D`
   - Deployment record: [deployments/horizenTestnet.json](/c:/Users/Arda/othergithubstuff/zenguess/deployments/horizenTestnet.json)
-- Frontend defaults to on-chain mode (`NEXT_PUBLIC_GATEWAY_MODE=onchain`).
+- Frontend defaults to on-chain mode with USDC.e collateral (`NEXT_PUBLIC_GATEWAY_MODE=onchain`, `NEXT_PUBLIC_COLLATERAL_MODE=usdce`).

@@ -16,6 +16,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { DollarSign, Gauge, Globe, Save } from "lucide-react"
 import { toast } from "sonner"
+import { clientEnv } from "@/lib/env/client"
 
 export default function SettingsPage() {
   const [network] = useState<"mainnet">("mainnet")
@@ -23,6 +24,7 @@ export default function SettingsPage() {
   const [slippage, setSlippage] = useState(1)
   const [currency, setCurrency] = useState<"usd" | "zen">("usd")
   const [notifications, setNotifications] = useState(true)
+  const collateralMode = clientEnv.NEXT_PUBLIC_COLLATERAL_MODE
 
   function handleSave() {
     toast.success("Settings saved", {
@@ -74,6 +76,25 @@ export default function SettingsPage() {
             />
             <p className="text-xs text-muted-foreground">
               Leave blank to use the default RPC endpoint.
+            </p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label>Default Collateral</Label>
+            <Select
+              value={collateralMode}
+              disabled
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="usdce">USDC.e (Production)</SelectItem>
+                <SelectItem value="eth">ETH/WETH (Advanced)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              USDC.e is the default collateral. ETH mode is retained for
+              internal advanced testing.
             </p>
           </div>
         </CardContent>

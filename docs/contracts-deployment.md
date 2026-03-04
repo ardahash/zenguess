@@ -36,16 +36,29 @@ npm run contracts:deploy:mainnet
 
 Deployment records are written to `deployments/<network>.json`.
 
-## Latest Deployments (March 1, 2026)
+To keep multiple managers (for example ETH and USDC.e) without overwriting:
+
+```bash
+DEPLOYMENT_LABEL=usdce npm run contracts:deploy:mainnet
+```
+
+This writes `deployments/horizenMainnet-usdce.json`.
+
+## Latest Deployments (March 3, 2026)
 
 - Testnet:
   - `MockCollateral`: `0x6B518E35d352EDbdB68839445839f5a254eDBa71`
   - `ZenGuessMarketManager`: `0xFe89369Fc2A2013D65dfe4C6Cf953b15e5175B59`
   - Record: [deployments/horizenTestnet.json](/c:/Users/Arda/othergithubstuff/zenguess/deployments/horizenTestnet.json)
 - Mainnet:
-  - `Bridged USDC (Stargate) (USDC.e)`: `0xDF7108f8B10F9b9eC1aba01CCa057268cbf86B6c`
-  - `ZenGuessMarketManager`: `0x8AbEdc4f49EeffC225948784E474d2280bF55E94`
-  - Record: [deployments/horizenMainnet.json](/c:/Users/Arda/othergithubstuff/zenguess/deployments/horizenMainnet.json)
+  - ETH/WETH manager (legacy/internal testing):
+    - `WETH`: `0x4200000000000000000000000000000000000006`
+    - `ZenGuessMarketManager`: `0xE3dB30ff10E851aA1f3e50Ed212281CB5e98a9E8`
+    - Record: [deployments/horizenMainnet.json](/c:/Users/Arda/othergithubstuff/zenguess/deployments/horizenMainnet.json)
+  - USDC.e manager (production default):
+    - `USDC.e`: `0xDF7108f8B10F9b9eC1aba01CCa057268cbf86B6c`
+    - `ZenGuessMarketManager`: `0x770fc931e07A6Df2f5F0Aa481a7c6AeC45286Ea7`
+    - Record: [deployments/horizenMainnet-usdce.json](/c:/Users/Arda/othergithubstuff/zenguess/deployments/horizenMainnet-usdce.json)
 
 ## Frontend Integration After Deploy
 

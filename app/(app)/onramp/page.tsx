@@ -296,7 +296,8 @@ export default function OnrampPage() {
       <div>
         <h1 className="text-2xl font-bold">Crosschain Onramp</h1>
         <p className="text-sm text-muted-foreground">
-          Bridge ETH or USDC to Horizen L3 via LayerZero/Stargate.
+          Bridge USDC from your source chain to Horizen, then trade USDC.e
+          markets on ZenGuess.
         </p>
       </div>
 
@@ -349,6 +350,10 @@ export default function OnrampPage() {
                   <SelectItem value="ETH">ETH</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                Recommended: bridge USDC to receive USDC.e on Horizen for
+                trading collateral.
+              </p>
             </div>
           </div>
 
@@ -383,6 +388,12 @@ export default function OnrampPage() {
             <p className="text-xs text-muted-foreground">
               No supported {asset} route to Horizen is currently available from
               the configured source chains.
+            </p>
+          ) : null}
+          {asset === "ETH" ? (
+            <p className="text-xs text-muted-foreground">
+              If ETH routes are unavailable, switch to USDC and bridge to
+              USDC.e first.
             </p>
           ) : null}
           {quoteError ? <p className="text-xs text-destructive">{quoteError}</p> : null}
