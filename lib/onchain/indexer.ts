@@ -61,6 +61,7 @@ type CacheStore = {
 
 const CACHE_TTL_MS = 3_000
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
+const RPC_LOG_BLOCK_RANGE = 90_000n
 
 function getCacheStore(): CacheStore {
   const globalStore = globalThis as typeof globalThis & {
@@ -200,21 +201,52 @@ function getFromBlock(chainId: number): bigint {
   return 0n
 }
 
+async function fetchLogsInChunks<TLog>(args: {
+  fromBlock: bigint
+  fetchChunk: (fromBlock: bigint, toBlock: bigint) => Promise<TLog[]>
+}): Promise<TLog[]> {
+  const client = getOnchainPublicClient()
+  const latestBlock = await client.getBlockNumber()
+
+  if (args.fromBlock > latestBlock) {
+    return []
+  }
+
+  const logs: TLog[] = []
+  for (
+    let chunkStart = args.fromBlock;
+    chunkStart <= latestBlock;
+    chunkStart += RPC_LOG_BLOCK_RANGE
+  ) {
+    const chunkEnd =
+      chunkStart + RPC_LOG_BLOCK_RANGE - 1n > latestBlock
+        ? latestBlock
+        : chunkStart + RPC_LOG_BLOCK_RANGE - 1n
+    logs.push(...(await args.fetchChunk(chunkStart, chunkEnd)))
+  }
+
+  return logs
+}
+
 async function fetchTradeLogs(args?: { marketId?: bigint; trader?: Address }) {
   const client = getOnchainPublicClient()
   const chainId = client.chain?.id ?? horizenMainnet.id
   const contracts = getContractBundle(chainId)
 
-  return client.getContractEvents({
-    address: contracts.marketManager,
-    abi: zenGuessMarketManagerAbi,
-    eventName: "TradeExecuted",
+  return fetchLogsInChunks({
     fromBlock: getFromBlock(chainId),
-    toBlock: "latest",
-    args: {
-      marketId: args?.marketId,
-      trader: args?.trader,
-    },
+    fetchChunk: (fromBlock, toBlock) =>
+      client.getContractEvents({
+        address: contracts.marketManager,
+        abi: zenGuessMarketManagerAbi,
+        eventName: "TradeExecuted",
+        fromBlock,
+        toBlock,
+        args: {
+          marketId: args?.marketId,
+          trader: args?.trader,
+        },
+      }),
   })
 }
 
@@ -222,12 +254,16 @@ async function fetchMarketCreatedLogs() {
   const client = getOnchainPublicClient()
   const chainId = client.chain?.id ?? horizenMainnet.id
   const contracts = getContractBundle(chainId)
-  return client.getContractEvents({
-    address: contracts.marketManager,
-    abi: zenGuessMarketManagerAbi,
-    eventName: "MarketCreated",
+  return fetchLogsInChunks({
     fromBlock: getFromBlock(chainId),
-    toBlock: "latest",
+    fetchChunk: (fromBlock, toBlock) =>
+      client.getContractEvents({
+        address: contracts.marketManager,
+        abi: zenGuessMarketManagerAbi,
+        eventName: "MarketCreated",
+        fromBlock,
+        toBlock,
+      }),
   })
 }
 
@@ -235,12 +271,16 @@ async function fetchMarketResolvedLogs() {
   const client = getOnchainPublicClient()
   const chainId = client.chain?.id ?? horizenMainnet.id
   const contracts = getContractBundle(chainId)
-  return client.getContractEvents({
-    address: contracts.marketManager,
-    abi: zenGuessMarketManagerAbi,
-    eventName: "MarketResolved",
+  return fetchLogsInChunks({
     fromBlock: getFromBlock(chainId),
-    toBlock: "latest",
+    fetchChunk: (fromBlock, toBlock) =>
+      client.getContractEvents({
+        address: contracts.marketManager,
+        abi: zenGuessMarketManagerAbi,
+        eventName: "MarketResolved",
+        fromBlock,
+        toBlock,
+      }),
   })
 }
 
